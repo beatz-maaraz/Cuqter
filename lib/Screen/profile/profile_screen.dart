@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart' as huge;
@@ -232,7 +233,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                               : MediaQuery.of(context).size.width,
                         ),
                         child: CustomScrollView(
-                          physics: const BouncingScrollPhysics(),
+                          physics: kIsWeb
+                              ? const ClampingScrollPhysics(
+                                  parent: RangeMaintainingScrollPhysics(),
+                                )
+                              : const BouncingScrollPhysics(
+                                  parent: AlwaysScrollableScrollPhysics(),
+                                ),
                           slivers: [
                         // App Bar
                         SliverToBoxAdapter(

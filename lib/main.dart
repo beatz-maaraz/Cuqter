@@ -111,13 +111,20 @@ class AppScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
     PointerDeviceKind.touch,
-    PointerDeviceKind.mouse,
     PointerDeviceKind.trackpad,
     PointerDeviceKind.stylus,
   };
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return const ClampingScrollPhysics(
+        parent: RangeMaintainingScrollPhysics(),
+      );
+    }
     return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
   }
 }

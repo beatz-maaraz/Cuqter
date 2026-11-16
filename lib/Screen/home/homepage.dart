@@ -765,7 +765,13 @@ class _HomepageState extends State<Homepage>
                       return Scrollbar(
                         child: ListView.builder(
                           padding: const EdgeInsets.only(top: 8, bottom: 90),
-                          physics: const BouncingScrollPhysics(),
+                          physics: kIsWeb || widget.isDesktop
+                              ? const ClampingScrollPhysics(
+                                  parent: RangeMaintainingScrollPhysics(),
+                                )
+                              : const BouncingScrollPhysics(
+                                  parent: AlwaysScrollableScrollPhysics(),
+                                ),
                           itemCount: users.length,
                           itemBuilder: (context, index) {
                             var userData =

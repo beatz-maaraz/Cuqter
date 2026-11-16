@@ -361,7 +361,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
       extendBody: true,
       body: PageView(
         controller: _pageController,
-        physics: const BouncingScrollPhysics(),
+        physics: kIsWeb
+            ? const NeverScrollableScrollPhysics()
+            : const BouncingScrollPhysics(),
         onPageChanged: (index) {
           if (_isProgrammaticChange) {
             if (index == _selectedIndex) {

@@ -2109,7 +2109,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                 radius: const Radius.circular(4),
                                 child: ListView.builder(
                                   controller: _scrollController,
-                                  physics: const BouncingScrollPhysics(),
+                                  physics: kIsWeb || widget.isDesktop
+                                      ? const ClampingScrollPhysics(
+                                          parent:
+                                              RangeMaintainingScrollPhysics(),
+                                        )
+                                      : const BouncingScrollPhysics(
+                                          parent:
+                                              AlwaysScrollableScrollPhysics(),
+                                        ),
                                   reverse: true,
                                   itemCount: _isUploading
                                       ? messages.length + 1
@@ -2124,7 +2132,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             horizontal: 12,
                                           ),
                                           padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
+                                            vertical: 8,
                                             horizontal: 16,
                                           ),
                                           decoration: BoxDecoration(
@@ -3046,7 +3054,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                               contentPadding:
                                                   const EdgeInsets.symmetric(
                                                     horizontal: 6,
-                                                    vertical: 10,
+                                                    vertical: 8,
                                                   ),
                                               border: InputBorder.none,
                                               enabledBorder: InputBorder.none,
@@ -3138,14 +3146,23 @@ class _ChatScreenState extends State<ChatScreen> {
                                       _alwaysShowSend ||
                                       value.text.trim().isNotEmpty;
                                   return AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 400),
+                                    duration: const Duration(milliseconds: 300),
                                     switchOutCurve: Curves.easeIn,
                                     switchInCurve: Curves.easeOutBack,
+                                    layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                                      return Stack(
+                                        alignment: Alignment.bottomRight,
+                                        children: <Widget>[
+                                          ...previousChildren,
+                                          ?currentChild,
+                                        ],
+                                      );
+                                    },
                                     transitionBuilder: (child, animation) {
                                       return SizeTransition(
                                         axis: Axis.horizontal,
                                         sizeFactor: animation,
-                                        alignment: Alignment.centerLeft,
+                                        alignment: Alignment.bottomLeft,
                                         child: SlideTransition(
                                           position: Tween<Offset>(
                                             begin: const Offset(1.0, 0.0),
@@ -3155,6 +3172,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             opacity: animation,
                                             child: ScaleTransition(
                                               scale: animation,
+                                              alignment: Alignment.bottomCenter,
                                               child: child,
                                             ),
                                           ),
@@ -5458,7 +5476,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: innerBoxColor,

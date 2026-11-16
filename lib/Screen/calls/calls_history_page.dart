@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -803,7 +804,9 @@ class _CallsHistoryPageState extends State<CallsHistoryPage>
               appBar: _buildAppBar(context, allFilteredDocIdsForAppBar),
               body: PageView(
                 controller: _pageController,
-                physics: const BouncingScrollPhysics(),
+                physics: kIsWeb
+                    ? const NeverScrollableScrollPhysics()
+                    : const BouncingScrollPhysics(),
                 onPageChanged: (index) {
                   final newFilter = index == 0 ? 'All' : 'Missed';
                   if (_activeFilter != newFilter) {
@@ -910,7 +913,13 @@ class _CallsHistoryPageState extends State<CallsHistoryPage>
 
     return ListView.builder(
       key: ValueKey('list_$filterType'),
-      physics: const BouncingScrollPhysics(),
+      physics: kIsWeb
+          ? const ClampingScrollPhysics(
+              parent: RangeMaintainingScrollPhysics(),
+            )
+          : const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
       padding: const EdgeInsets.only(top: 8, bottom: 90),
       itemCount: listItems.length,
       itemBuilder: (context, index) {

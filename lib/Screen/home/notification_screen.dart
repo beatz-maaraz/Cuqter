@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart' as huge;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -203,7 +204,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         .toList();
 
                     return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
+                      physics: kIsWeb
+                          ? const ClampingScrollPhysics(
+                              parent: RangeMaintainingScrollPhysics(),
+                            )
+                          : const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            ),
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
