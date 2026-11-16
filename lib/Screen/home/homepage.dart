@@ -392,6 +392,7 @@ class _HomepageState extends State<Homepage>
   Widget build(BuildContext context) {
     super.build(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -416,7 +417,9 @@ class _HomepageState extends State<Homepage>
                             IconButton(
                               icon: huge.HugeIcon(
                                 icon: huge.HugeIcons.strokeRoundedCancel01,
-                                color: colorScheme.onSurface,
+                                color: isDark
+                                    ? colorScheme.onSurface
+                                    : const Color(0xFF111827),
                                 size: 24,
                               ),
                               onPressed: () {
@@ -432,7 +435,9 @@ class _HomepageState extends State<Homepage>
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
+                                color: isDark
+                                    ? colorScheme.onSurface
+                                    : const Color(0xFF111827),
                               ),
                             ),
                           ],
@@ -442,7 +447,9 @@ class _HomepageState extends State<Homepage>
                             IconButton(
                               icon: huge.HugeIcon(
                                 icon: huge.HugeIcons.strokeRoundedPin02,
-                                color: colorScheme.onSurface,
+                                color: isDark
+                                    ? colorScheme.onSurface
+                                    : const Color(0xFF111827),
                                 size: 24,
                               ),
                               onPressed: () async {
@@ -477,7 +484,9 @@ class _HomepageState extends State<Homepage>
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
+                            color: isDark
+                                ? colorScheme.onSurface
+                                : const Color(0xFF111827),
                             letterSpacing: -1,
                           ),
                         ),
@@ -527,9 +536,11 @@ class _HomepageState extends State<Homepage>
                                 );
                               },
                               icon: AnimatedNotificationBell(
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                ),
+                                color: isDark
+                                    ? colorScheme.onSurface.withValues(
+                                        alpha: 0.7,
+                                      )
+                                    : const Color(0xFF111827),
                                 size: 24,
                               ),
                             ),
@@ -542,47 +553,80 @@ class _HomepageState extends State<Homepage>
             // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: TextField(
-                readOnly: true,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          const SearchScreen(),
-                      transitionsBuilder:
-                          (context, animation, secondaryAnimation, child) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position:
-                                    Tween<Offset>(
-                                      begin: const Offset(0.0, 0.05),
-                                      end: Offset.zero,
-                                    ).animate(
-                                      CurvedAnimation(
-                                        parent: animation,
-                                        curve: Curves.easeOutCubic,
-                                      ),
-                                    ),
-                                child: child,
-                              ),
-                            );
-                          },
-                      transitionDuration: const Duration(milliseconds: 250),
-                    ),
-                  );
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search users...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  filled: true,
-                  fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide.none,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? colorScheme.onSurface.withValues(alpha: 0.05)
+                      : const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.transparent
+                        : const Color(0xFFE5E7EB),
+                    width: 1.0,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  boxShadow: isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
+                child: TextField(
+                  readOnly: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            const SearchScreen(),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position:
+                                      Tween<Offset>(
+                                        begin: const Offset(0.0, 0.05),
+                                        end: Offset.zero,
+                                      ).animate(
+                                        CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOutCubic,
+                                        ),
+                                      ),
+                                  child: child,
+                                ),
+                              );
+                            },
+                        transitionDuration: const Duration(milliseconds: 250),
+                      ),
+                    );
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search users...',
+                    hintStyle: TextStyle(
+                      color: isDark
+                          ? colorScheme.onSurface.withValues(alpha: 0.4)
+                          : const Color(0xFF4B5563),
+                      fontSize: 14,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: isDark ? Colors.grey : const Color(0xFF4B5563),
+                    ),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -708,9 +752,11 @@ class _HomepageState extends State<Homepage>
                           child: Text(
                             'No messages yet',
                             style: TextStyle(
-                              color: colorScheme.onSurface.withValues(
-                                alpha: 0.4,
-                              ),
+                              color: isDark
+                                  ? colorScheme.onSurface.withValues(
+                                      alpha: 0.4,
+                                    )
+                                  : const Color(0xFF4B5563),
                             ),
                           ),
                         );
@@ -1009,9 +1055,12 @@ class _HomepageState extends State<Homepage>
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 16,
+                                                    color: isDark
+                                                        ? colorScheme.onSurface
+                                                        : const Color(0xFF111827),
                                                   ),
                                                 ),
                                               ),
@@ -1036,11 +1085,13 @@ class _HomepageState extends State<Homepage>
                                                     timeText,
                                                     style: TextStyle(
                                                       fontSize: 12,
-                                                      color: colorScheme
-                                                          .onSurface
-                                                          .withValues(
-                                                            alpha: 0.5,
-                                                          ),
+                                                      color: isDark
+                                                          ? colorScheme
+                                                              .onSurface
+                                                              .withValues(
+                                                                alpha: 0.5,
+                                                              )
+                                                          : const Color(0xFF4B5563),
                                                     ),
                                                   ),
                                                 ],
@@ -1063,11 +1114,13 @@ class _HomepageState extends State<Homepage>
                                                         size: 16,
                                                         color: lastMsg.isRead
                                                             ? Colors.blue
-                                                            : colorScheme
-                                                                  .onSurface
-                                                                  .withValues(
-                                                                    alpha: 0.4,
-                                                                  ),
+                                                            : (isDark
+                                                                ? colorScheme
+                                                                    .onSurface
+                                                                    .withValues(
+                                                                      alpha: 0.4,
+                                                                    )
+                                                                : const Color(0xFF4B5563)),
                                                       ),
                                                       const SizedBox(width: 4),
                                                     ],
@@ -1078,11 +1131,13 @@ class _HomepageState extends State<Homepage>
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                         style: TextStyle(
-                                                          color: colorScheme
-                                                              .onSurface
-                                                              .withValues(
-                                                                alpha: 0.6,
-                                                              ),
+                                                          color: isDark
+                                                              ? colorScheme
+                                                                  .onSurface
+                                                                  .withValues(
+                                                                    alpha: 0.6,
+                                                                  )
+                                                              : const Color(0xFF4B5563),
                                                           fontSize: 14,
                                                         ),
                                                       ),
@@ -1396,7 +1451,13 @@ class _HomepageState extends State<Homepage>
                 const SizedBox(height: 4),
                 Text(
                   'My status',
-                  style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? colorScheme.onSurface
+                        : const Color(0xFF111827),
+                  ),
                 ),
               ],
             ),
@@ -1468,7 +1529,13 @@ class _HomepageState extends State<Homepage>
               latestStatus.username.length > 8
                   ? '${latestStatus.username.substring(0, 8)}...'
                   : latestStatus.username,
-              style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? colorScheme.onSurface
+                    : const Color(0xFF111827),
+              ),
             ),
           ],
         ),

@@ -124,11 +124,14 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
                         'These are the devices that have logged into your account. You can log out of any unfamiliar devices.',
-                        style: TextStyle(fontSize: 14),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                     if (otherSessions.isNotEmpty) ...[
@@ -179,6 +182,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
   }
 
   Widget _buildSectionHeader(String title, ColorScheme colorScheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
@@ -187,7 +191,9 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
           fontSize: 12,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.1,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          color: isDark
+              ? colorScheme.onSurface.withValues(alpha: 0.6)
+              : colorScheme.onSurface.withValues(alpha: 0.75),
         ),
       ),
     );
@@ -198,6 +204,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
     required bool isCurrent,
     required ColorScheme colorScheme,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final data = doc.data() as Map<String, dynamic>;
     final deviceName = data['deviceName'] ?? 'Unknown Device';
     final deviceOs = data['deviceOs'] ?? 'Unknown OS';
@@ -209,19 +216,38 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
       lastActiveText = 'Last active: ${date.day}/${date.month}/${date.year}';
     }
 
+    final Color cardBg = isCurrent
+        ? (isDark
+            ? colorScheme.primaryContainer.withValues(alpha: 0.25)
+            : colorScheme.primary.withValues(alpha: 0.08))
+        : (isDark
+            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.5)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.65));
+
+    final Color borderColor = isCurrent
+        ? colorScheme.primary.withValues(alpha: isDark ? 0.4 : 0.5)
+        : (isDark
+            ? colorScheme.outlineVariant.withValues(alpha: 0.25)
+            : colorScheme.outlineVariant.withValues(alpha: 0.7));
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh.withValues(
-          alpha: isCurrent ? 0.8 : 0.4,
-        ),
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isCurrent
-              ? colorScheme.primary.withValues(alpha: 0.3)
-              : colorScheme.onSurface.withValues(alpha: 0.05),
+          color: borderColor,
           width: isCurrent ? 1.5 : 1.0,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -229,9 +255,17 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isCurrent
-                ? colorScheme.primary.withValues(alpha: 0.1)
-                : colorScheme.onSurface.withValues(alpha: 0.05),
+                ? colorScheme.primary.withValues(alpha: isDark ? 0.15 : 0.12)
+                : (isDark
+                    ? colorScheme.surfaceContainerHighest
+                    : colorScheme.surfaceContainerHighest.withValues(alpha: 0.8)),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: isCurrent
+                  ? colorScheme.primary.withValues(alpha: 0.25)
+                  : colorScheme.outlineVariant.withValues(alpha: 0.4),
+              width: 1,
+            ),
           ),
           child: Icon(
             deviceOs.toLowerCase().contains('android')
@@ -245,7 +279,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                 : Icons.devices,
             color: isCurrent
                 ? colorScheme.primary
-                : colorScheme.onSurface.withValues(alpha: 0.7),
+                : colorScheme.onSurfaceVariant,
           ),
         ),
         title: Row(
@@ -253,7 +287,11 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
             Expanded(
               child: Text(
                 deviceName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                  fontSize: 15,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -283,16 +321,19 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
             Text(
               deviceOs,
               style: TextStyle(
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               lastActiveText,
               style: TextStyle(
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
-                fontSize: 11,
+                color: isDark
+                    ? colorScheme.onSurface.withValues(alpha: 0.6)
+                    : colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 12,
               ),
             ),
           ],

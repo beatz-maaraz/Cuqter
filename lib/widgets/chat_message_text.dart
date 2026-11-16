@@ -260,7 +260,7 @@ class _LinkTextState extends State<_LinkText> {
         TextSpan(
           text: _isExpanded ? ' Read less' : ' Read more',
           style: widget.style.copyWith(
-            color: widget.style.color?.withValues(alpha: 0.7) ?? widget.linkColor,
+            color: widget.linkColor,
             fontWeight: FontWeight.bold,
           ),
           recognizer: readMoreRecognizer,

@@ -2434,14 +2434,44 @@ class _ChatScreenState extends State<ChatScreen> {
                                                                 .primary,
                                                             width: 2,
                                                           )
-                                                        : null,
+                                                        : Border.all(
+                                                            color: isMe
+                                                                ? colorScheme
+                                                                    .primary
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          Theme.of(context).brightness ==
+                                                                                  Brightness.dark
+                                                                              ? 0.3
+                                                                              : 0.25,
+                                                                    )
+                                                                : (Theme.of(context).brightness ==
+                                                                        Brightness.dark
+                                                                    ? colorScheme
+                                                                        .outlineVariant
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.2,
+                                                                        )
+                                                                    : colorScheme
+                                                                        .outlineVariant
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.6,
+                                                                        )),
+                                                            width: 1.0,
+                                                          ),
                                                     boxShadow: [
                                                       BoxShadow(
                                                         color: Colors.black
                                                             .withValues(
-                                                              alpha: 0.05,
+                                                              alpha:
+                                                                  Theme.of(context).brightness ==
+                                                                          Brightness.dark
+                                                                      ? 0.2
+                                                                      : 0.04,
                                                             ),
-                                                        blurRadius: 2,
+                                                        blurRadius: 4,
                                                         offset: const Offset(
                                                           0,
                                                           1,
@@ -2592,16 +2622,31 @@ class _ChatScreenState extends State<ChatScreen> {
         break;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.95),
+        color: isDark
+            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.95)
+            : colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.15),
+          color: isDark
+              ? colorScheme.primary.withValues(alpha: 0.25)
+              : colorScheme.outlineVariant.withValues(alpha: 0.7),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: isDark ? 0.2 : 0.05,
+            ),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -2864,51 +2909,57 @@ class _ChatScreenState extends State<ChatScreen> {
                       : KeyedSubtree(
                           key: const ValueKey('text_ui'),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              AnimatedRotation(
-                                turns: _isAttachmentMenuOpen ? 0.125 : 0.0,
-                                duration: const Duration(milliseconds: 200),
-                                child: IconButton(
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: _isAttachmentMenuOpen
-                                        ? colorScheme.error.withValues(
-                                            alpha: 0.12,
-                                          )
-                                        : colorScheme.primary.withValues(
-                                            alpha: 0.12,
-                                          ),
-                                    shape: const CircleBorder(),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2.0),
+                                child: AnimatedRotation(
+                                  turns: _isAttachmentMenuOpen ? 0.125 : 0.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: IconButton(
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: _isAttachmentMenuOpen
+                                          ? colorScheme.error.withValues(
+                                              alpha: 0.12,
+                                            )
+                                          : colorScheme.primary.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                      shape: const CircleBorder(),
+                                      minimumSize: const Size(44, 44),
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                    icon: huge.HugeIcon(
+                                      icon: huge.HugeIcons.strokeRoundedAdd01,
+                                      color: _isAttachmentMenuOpen
+                                          ? colorScheme.error
+                                          : colorScheme.primary,
+                                      size: 24,
+                                      strokeWidth: 3.0,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isAttachmentMenuOpen =
+                                            !_isAttachmentMenuOpen;
+                                        if (_isAttachmentMenuOpen) {
+                                          _showEmojiPicker = false;
+                                          _focusNode.unfocus();
+                                        }
+                                      });
+                                    },
                                   ),
-                                  icon: huge.HugeIcon(
-                                    icon: huge.HugeIcons.strokeRoundedAdd01,
-                                    color: _isAttachmentMenuOpen
-                                        ? colorScheme.error
-                                        : colorScheme.primary,
-                                    size: 24,
-                                    strokeWidth: 3.0,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isAttachmentMenuOpen =
-                                          !_isAttachmentMenuOpen;
-                                      if (_isAttachmentMenuOpen) {
-                                        _showEmojiPicker = false;
-                                        _focusNode.unfocus();
-                                      }
-                                    });
-                                  },
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(30),
+                                  borderRadius: BorderRadius.circular(24),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: colorScheme.onSurface.withValues(
                                         alpha: 0.06,
                                       ),
-                                      borderRadius: BorderRadius.circular(30),
+                                      borderRadius: BorderRadius.circular(24),
                                       border: Border.all(
                                         color: colorScheme.onSurface.withValues(
                                           alpha: 0.12,
@@ -2916,146 +2967,166 @@ class _ChatScreenState extends State<ChatScreen> {
                                         width: 1.0,
                                       ),
                                     ),
-                                    child: TextField(
-                                      focusNode: _focusNode,
-                                      controller: _messageController,
-                                      minLines: 1,
-                                      maxLines: 5,
-                                      textInputAction: TextInputAction.newline,
-                                      keyboardType: TextInputType.multiline,
-                                      style: TextStyle(
-                                        color: colorScheme.onSurface,
-                                      ),
-                                      onSubmitted: (value) {
-                                        if (value.trim().isNotEmpty) {
-                                          sendMessage();
-                                        }
-                                      },
-                                      decoration: InputDecoration(
-                                        prefixIcon: IconButton(
-                                          icon: _showEmojiPicker
-                                              ? huge.HugeIcon(
-                                                  icon: huge
-                                                      .HugeIcons
-                                                      .strokeRoundedKeyboard,
-                                                  color: colorScheme.primary,
-                                                  size: 22,
-                                                  strokeWidth: 1.8,
-                                                )
-                                              : huge.HugeIcon(
-                                                  icon: huge
-                                                      .HugeIcons
-                                                      .strokeRoundedSmile,
-                                                  color: colorScheme.primary,
-                                                  size: 22,
-                                                  strokeWidth: 1.8,
-                                                ),
-                                          onPressed: () {
-                                            if (_showEmojiPicker) {
-                                              _focusNode.requestFocus();
-                                              setState(() {
-                                                _showEmojiPicker = false;
-                                              });
-                                            } else {
-                                              _focusNode.unfocus();
-                                              setState(() {
-                                                _showEmojiPicker = true;
-                                                _isAttachmentMenuOpen = false;
-                                              });
-                                            }
-                                          },
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 6.0,
+                                            bottom: 4.0,
+                                          ),
+                                          child: IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                              minWidth: 36,
+                                              minHeight: 36,
+                                            ),
+                                            icon: _showEmojiPicker
+                                                ? huge.HugeIcon(
+                                                    icon: huge
+                                                        .HugeIcons
+                                                        .strokeRoundedKeyboard,
+                                                    color: colorScheme.primary,
+                                                    size: 22,
+                                                    strokeWidth: 1.8,
+                                                  )
+                                                : huge.HugeIcon(
+                                                    icon: huge
+                                                        .HugeIcons
+                                                        .strokeRoundedSmile,
+                                                    color: colorScheme.primary,
+                                                    size: 22,
+                                                    strokeWidth: 1.8,
+                                                  ),
+                                            onPressed: () {
+                                              if (_showEmojiPicker) {
+                                                _focusNode.requestFocus();
+                                                setState(() {
+                                                  _showEmojiPicker = false;
+                                                });
+                                              } else {
+                                                _focusNode.unfocus();
+                                                setState(() {
+                                                  _showEmojiPicker = true;
+                                                  _isAttachmentMenuOpen = false;
+                                                });
+                                              }
+                                            },
+                                          ),
                                         ),
-                                        suffixIcon:
-                                            ValueListenableBuilder<
-                                              TextEditingValue
-                                            >(
-                                              valueListenable:
-                                                  _messageController,
-                                              builder: (context, value, child) {
-                                                if (value.text
-                                                    .trim()
-                                                    .isNotEmpty) {
-                                                  return const SizedBox.shrink();
-                                                }
-                                                return Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    IconButton(
-                                                      icon: huge.HugeIcon(
+                                        Expanded(
+                                          child: TextField(
+                                            focusNode: _focusNode,
+                                            controller: _messageController,
+                                            minLines: 1,
+                                            maxLines: 5,
+                                            textInputAction:
+                                                TextInputAction.newline,
+                                            keyboardType:
+                                                TextInputType.multiline,
+                                            style: TextStyle(
+                                              color: colorScheme.onSurface,
+                                              fontSize: 16,
+                                            ),
+                                            onSubmitted: (value) {
+                                              if (value.trim().isNotEmpty) {
+                                                sendMessage();
+                                              }
+                                            },
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              hintText: 'Text a Message...',
+                                              hintStyle: TextStyle(
+                                                color: colorScheme.onSurface
+                                                    .withValues(alpha: 0.45),
+                                                fontSize: 16,
+                                              ),
+                                              filled: false,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 10,
+                                                  ),
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                            ),
+                                          ),
+                                        ),
+                                        ValueListenableBuilder<
+                                          TextEditingValue
+                                        >(
+                                          valueListenable: _messageController,
+                                          builder: (context, value, child) {
+                                            if (value.text
+                                                .trim()
+                                                .isNotEmpty) {
+                                              return const SizedBox(width: 6);
+                                            }
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                right: 6.0,
+                                                bottom: 4.0,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize:
+                                                    MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  IconButton(
+                                                    padding: EdgeInsets.zero,
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                          minWidth: 36,
+                                                          minHeight: 36,
+                                                        ),
+                                                    icon: huge.HugeIcon(
+                                                      icon: huge
+                                                          .HugeIcons
+                                                          .strokeRoundedCamera01,
+                                                      color:
+                                                          colorScheme.primary,
+                                                      size: 22,
+                                                      strokeWidth: 1.8,
+                                                    ),
+                                                    onPressed:
+                                                        _openCameraCapture,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  GestureDetector(
+                                                    onLongPress:
+                                                        _startRecording,
+                                                    onTap: () {
+                                                      _showErrorSnackBar(
+                                                        'Hold the mic to record a voice message',
+                                                      );
+                                                    },
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            6.0,
+                                                          ),
+                                                      color:
+                                                          Colors.transparent,
+                                                      child: huge.HugeIcon(
                                                         icon: huge
                                                             .HugeIcons
-                                                            .strokeRoundedCamera01,
-                                                        color:
-                                                            colorScheme.primary,
+                                                            .strokeRoundedMic01,
+                                                        color: colorScheme
+                                                            .primary,
                                                         size: 22,
                                                         strokeWidth: 1.8,
                                                       ),
-                                                      onPressed:
-                                                          _openCameraCapture,
                                                     ),
-                                                    GestureDetector(
-                                                      onLongPress:
-                                                          _startRecording,
-                                                      onTap: () {
-                                                        _showErrorSnackBar(
-                                                          'Hold the mic to record a voice message',
-                                                        );
-                                                      },
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets.all(
-                                                              8.0,
-                                                            ),
-                                                        color:
-                                                            Colors.transparent,
-                                                        child: huge.HugeIcon(
-                                                          icon: huge
-                                                              .HugeIcons
-                                                              .strokeRoundedMic01,
-                                                          color: colorScheme
-                                                              .primary,
-                                                          size: 22,
-                                                          strokeWidth: 1.8,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                  ],
-                                                );
-                                              },
-                                            ),
-                                        hintText: 'Text a Message...',
-                                        hintStyle: TextStyle(
-                                          color: colorScheme.onSurface
-                                              .withValues(alpha: 0.45),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
                                         ),
-                                        filled: true,
-                                        fillColor: Colors.transparent,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                              vertical: 12,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -3091,41 +3162,50 @@ class _ChatScreenState extends State<ChatScreen> {
                                       );
                                     },
                                     child: showSend
-                                        ? Row(
-                                            key: const ValueKey('send_btn'),
-                                            children: [
-                                              const SizedBox(width: 8),
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(28),
-                                                child: BackdropFilter(
-                                                  filter: ImageFilter.blur(
-                                                    sigmaX: 14,
-                                                    sigmaY: 14,
-                                                  ),
-                                                  child: Container(
-                                                    width: 50,
-                                                    height: 50,
-                                                    decoration: BoxDecoration(
-                                                      color: colorScheme.primary
-                                                          .withValues(
-                                                            alpha: 0.85,
-                                                          ),
-                                                      shape: BoxShape.circle,
+                                        ? Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 2.0,
+                                            ),
+                                            child: Row(
+                                              key: const ValueKey('send_btn'),
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                const SizedBox(width: 8),
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(24),
+                                                  child: BackdropFilter(
+                                                    filter: ImageFilter.blur(
+                                                      sigmaX: 14,
+                                                      sigmaY: 14,
                                                     ),
-                                                    child: AnimatedSendButton(
-                                                      onTap: sendMessage,
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      iconColor:
-                                                          colorScheme.onPrimary,
-                                                      iconSize: 22.0,
-                                                      radius: 24.0,
+                                                    child: Container(
+                                                      width: 44,
+                                                      height: 44,
+                                                      decoration: BoxDecoration(
+                                                        color: colorScheme
+                                                            .primary
+                                                            .withValues(
+                                                              alpha: 0.85,
+                                                            ),
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: AnimatedSendButton(
+                                                        onTap: sendMessage,
+                                                        backgroundColor:
+                                                            Colors.transparent,
+                                                        iconColor: colorScheme
+                                                            .onPrimary,
+                                                        iconSize: 20.0,
+                                                        radius: 22.0,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           )
                                         : const SizedBox.shrink(
                                             key: ValueKey('empty'),
@@ -5429,7 +5509,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ? colorScheme.onPrimaryContainer
                     : colorScheme.onSurfaceVariant,
               ),
-              linkColor: isMe ? colorScheme.onPrimary : colorScheme.primary,
+              linkColor: isMe
+                  ? (Theme.of(context).brightness == Brightness.dark
+                      ? colorScheme.onPrimary
+                      : colorScheme.primary)
+                  : colorScheme.primary,
             ),
             const SizedBox(height: 1),
             _buildTimeAndStatusRow(isMe, colorScheme, timeText, isRead),

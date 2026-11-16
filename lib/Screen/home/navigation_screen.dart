@@ -196,6 +196,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
   ) {
     final isSelected = _selectedIndex == index;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final unselectedColor = isDark
+        ? colorScheme.onSurface.withValues(alpha: 0.45)
+        : const Color(0xFF4B5563);
 
     return Expanded(
       child: Material(
@@ -226,7 +231,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     icon: isSelected ? activeIcon : icon,
                     color: isSelected
                         ? colorScheme.primary
-                        : colorScheme.onSurface.withValues(alpha: 0.45),
+                        : unselectedColor,
                     size: 19,
                   ),
                 ),
@@ -239,7 +244,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected
                         ? colorScheme.primary
-                        : colorScheme.onSurface.withValues(alpha: 0.45),
+                        : unselectedColor,
                     letterSpacing: 0.3,
                   ),
                   child: Text(label),
@@ -255,6 +260,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Widget _buildProfileItem(int index) {
     final isSelected = _selectedIndex == index;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final unselectedColor = isDark
+        ? colorScheme.onSurface.withValues(alpha: 0.45)
+        : const Color(0xFF4B5563);
 
     return Expanded(
       child: Material(
@@ -329,7 +339,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected
                         ? colorScheme.primary
-                        : colorScheme.onSurface.withValues(alpha: 0.45),
+                        : unselectedColor,
                     letterSpacing: 0.3,
                   ),
                   child: const Text('PROFILE'),
@@ -382,13 +392,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     decoration: BoxDecoration(
                       color: isDark
                           ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.95)
-                          : colorScheme.surface.withValues(alpha: 0.95),
+                          : const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(
-                        color: colorScheme.onSurface.withValues(
-                          alpha: isDark ? 0.12 : 0.06,
-                        ),
-                        width: 1,
+                        color: isDark
+                            ? colorScheme.onSurface.withValues(
+                                alpha: 0.12,
+                              )
+                            : const Color(0xFFE5E7EB),
+                        width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -397,7 +409,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           ),
                           blurRadius: 16,
                           spreadRadius: 0,
-                          offset: const Offset(0, 8),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -427,13 +439,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       decoration: BoxDecoration(
                         color: isDark
                             ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.60)
-                            : colorScheme.surface.withValues(alpha: 0.70),
+                            : const Color(0xFFF3F4F6).withValues(alpha: 0.94),
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(
-                          color: colorScheme.onSurface.withValues(
-                            alpha: isDark ? 0.12 : 0.06,
-                          ),
-                          width: 1,
+                          color: isDark
+                              ? colorScheme.onSurface.withValues(
+                                  alpha: 0.12,
+                                )
+                              : const Color(0xFFE5E7EB),
+                          width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -442,7 +456,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             ),
                             blurRadius: 16,
                             spreadRadius: 0,
-                            offset: const Offset(0, 8),
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
