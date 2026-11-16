@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cuqter/modules/user.dart' as model;
-// import 'package:cuqter/resources/storage_method.dart';
+import 'package:cuqter/services/session_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -307,6 +307,10 @@ class AuthMethod {
   }
 
   Future<void> signOut() async {
+    try {
+      await SessionService().removeCurrentSession();
+      await SessionService().clearLocalSession();
+    } catch (_) {}
     try {
       if (!kIsWeb) {
         await GoogleSignIn().signOut();

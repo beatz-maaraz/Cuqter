@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cuqter/resources/auth_method.dart';
+import 'package:cuqter/Account/login.dart';
+import 'package:cuqter/main.dart';
 import 'package:cuqter/services/session_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ class SessionValidatorWrapper extends StatefulWidget {
 
 class _SessionValidatorWrapperState extends State<SessionValidatorWrapper> {
   StreamSubscription<DocumentSnapshot>? _sessionSub;
+  bool _hasConfirmedExistence = false;
 
   @override
   void initState() {
@@ -26,23 +28,52 @@ class _SessionValidatorWrapperState extends State<SessionValidatorWrapper> {
 
   Future<void> _initSessionListener() async {
     try {
-      final deviceId = await SessionService().getDeviceId();
       final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-      if (user != null) {
-        _sessionSub = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('sessions')
-            .doc(deviceId)
-            .snapshots()
-            .listen((doc) {
-              // If the session document is deleted remotely, log out
-              if (!doc.exists) {
-                AuthMethod().signOut();
+      final deviceId = await SessionService().getDeviceId();
+
+      // Ensure session is recorded on startup
+      await SessionService().recordLoginSession(user.uid);
+
+      // Listen for remote termination of this device's document
+      _sessionSub = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('devices')
+          .doc(deviceId)
+          .snapshots()
+          .listen((doc) async {
+            if (doc.exists) {
+              _hasConfirmedExistence = true;
+            } else if (!doc.exists && _hasConfirmedExistence) {
+              // Remote logout detected
+              _sessionSub?.cancel();
+              _sessionSub = null;
+
+              await FirebaseAuth.instance.signOut();
+              await SessionService().clearLocalSession();
+
+              // Navigate back to login
+              navigatorKey.currentState?.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const Loginpage()),
+                (route) => false,
+              );
+
+              final navContext = navigatorKey.currentContext;
+              if (navContext != null && navContext.mounted) {
+                ScaffoldMessenger.of(navContext).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'You have been logged out remotely from this device.',
+                    ),
+                    backgroundColor: Colors.redAccent,
+                    duration: Duration(seconds: 4),
+                  ),
+                );
               }
-            });
-      }
+            }
+          });
     } catch (e) {
       debugPrint('Error starting session listener: $e');
     }

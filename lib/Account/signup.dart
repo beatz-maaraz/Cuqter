@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:ui';
 import 'dart:typed_data';
 import 'package:cuqter/resources/auth_method.dart';
+import 'package:cuqter/services/session_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuqter/services/cloudinary_service.dart';
 import 'package:cuqter/utils/picker.dart';
 import 'package:flutter/material.dart';
@@ -98,6 +100,10 @@ class _SighuppageState extends State<Sighuppage> {
       }
 
       if (mounted) {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          SessionService().recordLoginSession(currentUser.uid);
+        }
         showSnackBar('Account created successfully', context);
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
@@ -134,6 +140,10 @@ class _SighuppageState extends State<Sighuppage> {
         _isLoading = false;
       });
       if (res == 'success') {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          SessionService().recordLoginSession(currentUser.uid);
+        }
         showSnackBar('Account connected with Google successfully', context);
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(

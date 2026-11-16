@@ -1,3 +1,4 @@
+import 'package:cuqter/widgets/session_validator_wrapper.dart';
 import 'dart:ui';
 import 'package:cuqter/Account/login.dart';
 import 'package:cuqter/Screen/home/navigation_screen.dart';
@@ -223,9 +224,11 @@ class _MainAppState extends State<MainApp> {
           initialData: FirebaseAuth.instance.currentUser,
           builder: (context, snapshot) {
             if (snapshot.hasData || FirebaseAuth.instance.currentUser != null) {
-              return const ResponsiveLayout(
-                mobileLayout: NavigationScreen(),
-                desktopLayout: DesktopNavigationScreen(),
+              return const SessionValidatorWrapper(
+                child: ResponsiveLayout(
+                  mobileLayout: NavigationScreen(),
+                  desktopLayout: DesktopNavigationScreen(),
+                ),
               );
             }
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -251,6 +254,7 @@ class _AppLockWrapperState extends State<AppLockWrapper>
     with WidgetsBindingObserver {
   late bool _isLocked;
   bool _isPaused = false;
+  DateTime? _pausedAt;
 
   @override
   void initState() {
@@ -273,10 +277,11 @@ class _AppLockWrapperState extends State<AppLockWrapper>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _isPaused = true;
+      _pausedAt = DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
       if (_isPaused && !_isLocked) {
         _isPaused = false;
-        _checkAppLock();
+        _checkAppLockOnResume();
       }
     }
   }
@@ -291,6 +296,30 @@ class _AppLockWrapperState extends State<AppLockWrapper>
     if (mounted) {
       setState(() {
         _isLocked = isLockEnabled;
+      });
+    }
+  }
+
+  Future<void> _checkAppLockOnResume() async {
+    if (BiometricService.isAuthenticating) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final isLockEnabled = await BiometricService.isAppLockEnabled();
+    if (!isLockEnabled) return;
+
+    final timeoutSeconds = await BiometricService.getAppLockTimeoutSeconds();
+    if (timeoutSeconds > 0 && _pausedAt != null) {
+      final elapsed = DateTime.now().difference(_pausedAt!).inSeconds;
+      if (elapsed < timeoutSeconds) {
+        return;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLocked = true;
       });
     }
   }

@@ -12,6 +12,8 @@ class ActiveSessionsPage extends StatefulWidget {
   State<ActiveSessionsPage> createState() => _ActiveSessionsPageState();
 }
 
+typedef ActiveDevicesPage = ActiveSessionsPage;
+
 class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -31,29 +33,32 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
     }
   }
 
-  Future<void> _logoutAllOtherDevices(List<DocumentSnapshot> sessions) async {
+  Future<void> _logoutAllOtherDevices(List<DocumentSnapshot> devices) async {
     final user = _auth.currentUser;
     if (user == null || _currentDeviceId == null) return;
 
-    // Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Log out of all other devices?'),
         content: const Text(
-          'This will immediately disconnect your account from all other devices.',
+          'This will immediately disconnect your account from all other logged-in devices and sessions.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Log Out'),
           ),
         ],
@@ -61,13 +66,49 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
     );
 
     if (confirm == true) {
-      for (var doc in sessions) {
-        if (doc.id != _currentDeviceId) {
-          await SessionService().logoutDevice(user.uid, doc.id);
-        }
-      }
+      await SessionService().logoutAllOtherDevices(user.uid);
       if (mounted) {
         showCustomSnackBar(context, 'Logged out of all other devices');
+      }
+    }
+  }
+
+  Future<void> _logoutSingleDevice(String targetDeviceId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Log out this device?'),
+        content: const Text(
+          'This session will be remotely terminated immediately.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await SessionService().logoutDevice(user.uid, targetDeviceId);
+      if (mounted) {
+        showCustomSnackBar(context, 'Device logged out');
       }
     }
   }
@@ -91,7 +132,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Active Sessions',
+          'Active Devices',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: colorScheme.onSurface,
@@ -105,7 +146,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
               stream: _firestore
                   .collection('users')
                   .doc(user.uid)
-                  .collection('sessions')
+                  .collection('devices')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -113,11 +154,11 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No active sessions found.'));
+                  return const Center(child: Text('No active devices found.'));
                 }
 
-                final sessions = snapshot.data!.docs;
-                final otherSessions = sessions
+                final devices = snapshot.data!.docs;
+                final otherDevices = devices
                     .where((doc) => doc.id != _currentDeviceId)
                     .toList();
 
@@ -127,47 +168,50 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
-                        'These are the devices that have logged into your account. You can log out of any unfamiliar devices.',
+                        'These are the devices currently logged into your account. You can log out of any unfamiliar devices.',
                         style: TextStyle(
                           fontSize: 14,
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
-                    if (otherSessions.isNotEmpty) ...[
+                    if (otherDevices.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: ElevatedButton.icon(
-                          onPressed: () => _logoutAllOtherDevices(sessions),
+                          onPressed: () => _logoutAllOtherDevices(devices),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colorScheme.errorContainer,
                             foregroundColor: colorScheme.onErrorContainer,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          icon: const Icon(Icons.logout),
-                          label: const Text('Log out of all other devices'),
+                          icon: const Icon(Icons.logout, size: 20),
+                          label: const Text(
+                            'Log out of all other devices',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ],
-                    _buildSectionHeader('CURRENT DEVICE', colorScheme),
-                    ...sessions
+                    _buildSectionHeader('THIS DEVICE', colorScheme),
+                    ...devices
                         .where((doc) => doc.id == _currentDeviceId)
                         .map(
-                          (doc) => _buildSessionTile(
+                          (doc) => _buildDeviceTile(
                             doc,
                             isCurrent: true,
                             colorScheme: colorScheme,
                           ),
                         ),
 
-                    if (otherSessions.isNotEmpty) ...[
+                    if (otherDevices.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       _buildSectionHeader('OTHER DEVICES', colorScheme),
-                      ...otherSessions.map(
-                        (doc) => _buildSessionTile(
+                      ...otherDevices.map(
+                        (doc) => _buildDeviceTile(
                           doc,
                           isCurrent: false,
                           colorScheme: colorScheme,
@@ -199,21 +243,32 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
     );
   }
 
-  Widget _buildSessionTile(
+  Widget _buildDeviceTile(
     DocumentSnapshot doc, {
     required bool isCurrent,
     required ColorScheme colorScheme,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final data = doc.data() as Map<String, dynamic>;
-    final deviceName = data['deviceName'] ?? 'Unknown Device';
-    final deviceOs = data['deviceOs'] ?? 'Unknown OS';
-    final lastActive = data['lastActive'] as Timestamp?;
+    final deviceModel =
+        data['deviceModel'] ?? data['deviceName'] ?? 'Unknown Device';
+    final deviceOs =
+        data['deviceOs'] ?? data['osVersion'] ?? 'Unknown OS';
+    final lastActive =
+        (data['lastActive'] ?? data['loginTimestamp']) as Timestamp?;
 
-    String lastActiveText = 'Recently active';
-    if (lastActive != null) {
+    String lastActiveText = isCurrent ? 'Active now' : 'Recently active';
+    if (lastActive != null && !isCurrent) {
       final date = lastActive.toDate();
-      lastActiveText = 'Last active: ${date.day}/${date.month}/${date.year}';
+      final now = DateTime.now();
+      final diff = now.difference(date);
+      if (diff.inMinutes < 60) {
+        lastActiveText = 'Active ${diff.inMinutes} mins ago';
+      } else if (diff.inHours < 24) {
+        lastActiveText = 'Active ${diff.inHours} hours ago';
+      } else {
+        lastActiveText = 'Last active: ${date.day}/${date.month}/${date.year}';
+      }
     }
 
     final Color cardBg = isCurrent
@@ -276,6 +331,8 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
                 ? Icons.laptop_mac
                 : deviceOs.toLowerCase().contains('web')
                 ? Icons.web
+                : deviceOs.toLowerCase().contains('windows')
+                ? Icons.desktop_windows
                 : Icons.devices,
             color: isCurrent
                 ? colorScheme.primary
@@ -286,7 +343,7 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
           children: [
             Expanded(
               child: Text(
-                deviceName,
+                deviceModel,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -298,16 +355,16 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
             if (isCurrent)
               Container(
                 margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Current',
+                  'This device',
                   style: TextStyle(
                     color: colorScheme.onPrimary,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -340,18 +397,17 @@ class _ActiveSessionsPageState extends State<ActiveSessionsPage> {
         ),
         trailing: isCurrent
             ? null
-            : IconButton(
-                icon: Icon(Icons.logout, color: colorScheme.error),
-                tooltip: 'Log out device',
-                onPressed: () async {
-                  final user = _auth.currentUser;
-                  if (user != null) {
-                    await SessionService().logoutDevice(user.uid, doc.id);
-                    if (mounted) {
-                      showCustomSnackBar(context, 'Device logged out');
-                    }
-                  }
-                },
+            : TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.error,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                icon: const Icon(Icons.logout, size: 18),
+                label: const Text(
+                  'Log out',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                onPressed: () => _logoutSingleDevice(doc.id),
               ),
       ),
     );

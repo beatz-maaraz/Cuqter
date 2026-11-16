@@ -1,6 +1,8 @@
 import 'package:cuqter/Account/signup.dart';
 import 'package:cuqter/Account/forgot_password.dart';
 import 'package:cuqter/resources/auth_method.dart';
+import 'package:cuqter/services/session_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuqter/utils/picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cuqter/widgets/google_logo_icon.dart';
@@ -45,6 +47,10 @@ class _LoginpageState extends State<Loginpage> {
         _isLoading = false;
       });
       if (res == 'success') {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          SessionService().recordLoginSession(currentUser.uid);
+        }
         showSnackBar('Login successful', context);
         emailController.clear();
         passwordController.clear();
@@ -75,6 +81,10 @@ class _LoginpageState extends State<Loginpage> {
         _isLoading = false;
       });
       if (res == 'success') {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          SessionService().recordLoginSession(currentUser.uid);
+        }
         showSnackBar('Login successful', context);
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(

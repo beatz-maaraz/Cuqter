@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart' as huge;
 import 'package:cuqter/resources/auth_method.dart';
 import 'package:cuqter/services/biometric_service.dart';
 import 'package:cuqter/utils/custom_snackbar.dart';
+import 'package:cuqter/Screen/settings/active_sessions_page.dart';
 
 class SecuritySettingsPage extends StatefulWidget {
   const SecuritySettingsPage({super.key});
@@ -19,6 +20,9 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _appLockEnabled = false;
+  int _appLockTimeoutSeconds = 0;
+  bool _twoStepEnabled = false;
+  bool _loginAlertsEnabled = false;
   bool _showLastSeen = true;
   bool _showReadReceipts = true;
   bool _isLoading = true;
@@ -35,6 +39,8 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       _appLockEnabled = prefs.getBool('app_lock_enabled') ?? false;
+      _appLockTimeoutSeconds = await BiometricService.getAppLockTimeoutSeconds();
+      _twoStepEnabled = await BiometricService.isTwoStepVerificationEnabled();
 
       final user = _auth.currentUser;
       if (user != null) {
@@ -57,6 +63,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           if (data != null) {
             _showLastSeen = data['showLastSeen'] ?? true;
             _showReadReceipts = data['showReadReceipts'] ?? true;
+            _loginAlertsEnabled = data['loginAlertsEnabled'] ?? false;
           }
         }
       }
@@ -101,6 +108,348 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
         ),
       );
     }
+  }
+
+  Future<void> _toggleLoginAlerts(bool value) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    setState(() {
+      _loginAlertsEnabled = value;
+    });
+    try {
+      await _firestore.collection('users').doc(user.uid).update({
+        'loginAlertsEnabled': value,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('login_alerts_enabled', value);
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          value
+              ? 'Login alerts enabled. You will be notified of new logins.'
+              : 'Login alerts disabled.',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating login alerts setting: $e');
+    }
+  }
+
+  void _showAutoLockTimeoutPicker() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final options = [
+      {'label': 'Immediately', 'seconds': 0},
+      {'label': 'After 1 minute', 'seconds': 60},
+      {'label': 'After 5 minutes', 'seconds': 300},
+      {'label': 'After 15 minutes', 'seconds': 900},
+      {'label': 'After 30 minutes', 'seconds': 1800},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'Auto-Lock Timeout',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...options.map((option) {
+                  final isSelected =
+                      _appLockTimeoutSeconds == option['seconds'];
+                  return ListTile(
+                    title: Text(
+                      option['label'] as String,
+                      style: TextStyle(
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? colorScheme.primary
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(Icons.check_circle, color: colorScheme.primary)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    onTap: () async {
+                      final seconds = option['seconds'] as int;
+                      await BiometricService.setAppLockTimeoutSeconds(seconds);
+                      if (bottomSheetContext.mounted) {
+                        Navigator.pop(bottomSheetContext);
+                      }
+                      if (mounted) {
+                        setState(() {
+                          _appLockTimeoutSeconds = seconds;
+                        });
+                      }
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showTwoStepVerificationSetup() {
+    final pinController = TextEditingController();
+    final confirmController = TextEditingController();
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: Row(
+                children: [
+                  huge.HugeIcon(
+                    icon: huge.HugeIcons.strokeRoundedSecurityValidation,
+                    color: colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Set Security PIN'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Create a 6-digit PIN to protect sensitive actions and unlock the app.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: pinController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      obscureText: true,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        letterSpacing: 6,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Enter 6-digit PIN',
+                        counterText: '',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      obscureText: true,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        letterSpacing: 6,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Confirm 6-digit PIN',
+                        counterText: '',
+                        errorText: errorMessage,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final pin = pinController.text.trim();
+                    final confirm = confirmController.text.trim();
+                    if (pin.length != 6) {
+                      setDialogState(() {
+                        errorMessage = 'PIN must be exactly 6 digits';
+                      });
+                      return;
+                    }
+                    if (pin != confirm) {
+                      setDialogState(() {
+                        errorMessage = 'PINs do not match';
+                      });
+                      return;
+                    }
+
+                    await BiometricService.setTwoStepVerificationPin(pin);
+                    final user = _auth.currentUser;
+                    if (user != null) {
+                      await _firestore
+                          .collection('users')
+                          .doc(user.uid)
+                          .update({
+                            'twoStepVerificationEnabled': true,
+                          })
+                          .catchError((_) {});
+                    }
+
+                    if (dialogContext.mounted) {
+                      Navigator.pop(dialogContext);
+                    }
+                    if (mounted) {
+                      setState(() {
+                        _twoStepEnabled = true;
+                      });
+                      showCustomSnackBar(
+                        this.context,
+                        'Two-Step Verification PIN activated successfully',
+                      );
+                    }
+                  },
+                  child: const Text('Save PIN'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showTwoStepVerificationManage() {
+    final colorScheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: huge.HugeIcon(
+                      icon: huge.HugeIcons.strokeRoundedEdit02,
+                      color: colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text('Change Security PIN'),
+                  subtitle: const Text('Update your existing 6-digit PIN'),
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    _showTwoStepVerificationSetup();
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.error.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: huge.HugeIcon(
+                      icon: huge.HugeIcons.strokeRoundedCancel01,
+                      color: colorScheme.error,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Disable Two-Step Verification',
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                  subtitle: const Text('Remove Security PIN protection'),
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    await BiometricService.disableTwoStepVerification();
+                    final user = _auth.currentUser;
+                    if (user != null) {
+                      await _firestore
+                          .collection('users')
+                          .doc(user.uid)
+                          .update({
+                            'twoStepVerificationEnabled': false,
+                          })
+                          .catchError((_) {});
+                    }
+                    if (mounted) {
+                      setState(() {
+                        _twoStepEnabled = false;
+                      });
+                      showCustomSnackBar(
+                        context,
+                        'Two-Step Verification disabled',
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _toggleLastSeen(bool value) async {
@@ -255,6 +604,15 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
     );
   }
 
+  String _formatTimeoutLabel(int seconds) {
+    if (seconds == 0) return 'Immediately';
+    if (seconds == 60) return 'After 1 minute';
+    if (seconds == 300) return 'After 5 minutes';
+    if (seconds == 900) return 'After 15 minutes';
+    if (seconds == 1800) return 'After 30 minutes';
+    return 'After ${seconds ~/ 60} mins';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -335,19 +693,108 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                         ? null
                         : _sendEmailVerification,
                   ),
+                  _buildListTile(
+                    icon: huge.HugeIcons.strokeRoundedSecurityValidation,
+                    title: 'Two-Step Verification',
+                    subtitle: _twoStepEnabled
+                        ? '6-digit Security PIN is active'
+                        : 'Add extra layer of protection with a PIN',
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _twoStepEnabled ? 'Enabled' : 'Off',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _twoStepEnabled
+                                ? colorScheme.primary
+                                : colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        huge.HugeIcon(
+                          icon: huge.HugeIcons.strokeRoundedArrowRight01,
+                          size: 18,
+                          color: colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ],
+                    ),
+                    onTap: _twoStepEnabled
+                        ? _showTwoStepVerificationManage
+                        : _showTwoStepVerificationSetup,
+                  ),
                 ]),
                 const SizedBox(height: 24),
 
-                _buildSectionLabel('PRIVACY & PROTECTION'),
+                _buildSectionLabel('APP LOCK & TIMEOUT'),
                 const SizedBox(height: 8),
                 _buildGroupedSection([
                   _buildSwitchTile(
                     icon: huge.HugeIcons.strokeRoundedSecurityValidation,
                     title: 'App Lock',
-                    subtitle: 'Require passcode/biometrics to open app',
+                    subtitle: 'Require biometric / passcode to open app',
                     value: _appLockEnabled,
                     onChanged: _toggleAppLock,
                   ),
+                  if (_appLockEnabled)
+                    _buildListTile(
+                      icon: huge.HugeIcons.strokeRoundedClock01,
+                      title: 'Auto-Lock Timeout',
+                      subtitle: 'Lock after app goes to background',
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _formatTimeoutLabel(_appLockTimeoutSeconds),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          huge.HugeIcon(
+                            icon: huge.HugeIcons.strokeRoundedArrowRight01,
+                            size: 18,
+                            color: colorScheme.onSurface.withValues(alpha: 0.3),
+                          ),
+                        ],
+                      ),
+                      onTap: _showAutoLockTimeoutPicker,
+                    ),
+                ]),
+                const SizedBox(height: 24),
+
+                _buildSectionLabel('DEVICES & SESSIONS'),
+                const SizedBox(height: 8),
+                _buildGroupedSection([
+                  _buildListTile(
+                    icon: huge.HugeIcons.strokeRoundedSmartPhone01,
+                    title: 'Active Devices',
+                    subtitle: 'View logged-in devices and remote logouts',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ActiveSessionsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildSwitchTile(
+                    icon: huge.HugeIcons.strokeRoundedNotification01,
+                    title: 'Login Alerts',
+                    subtitle: 'Notify when a new device logs into your account',
+                    value: _loginAlertsEnabled,
+                    onChanged: _toggleLoginAlerts,
+                  ),
+                ]),
+                const SizedBox(height: 24),
+
+                _buildSectionLabel('PRIVACY & PRESENCE'),
+                const SizedBox(height: 8),
+                _buildGroupedSection([
                   _buildSwitchTile(
                     icon: huge.HugeIcons.strokeRoundedEye,
                     title: 'Show Last Seen',
@@ -391,16 +838,40 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
   }
 
   Widget _buildSecurityStatusHeader(ColorScheme colorScheme, User? user) {
-    final bool isVerified = user?.emailVerified ?? false;
+    int score = 0;
+    if (user?.emailVerified == true) score++;
+    if (_appLockEnabled) score++;
+    if (_twoStepEnabled) score++;
+    if (_loginAlertsEnabled) score++;
+
+    final bool isFull = score >= 4;
+    final bool isGood = score >= 2;
+
+    final Color statusColor = isFull
+        ? colorScheme.primary
+        : (isGood ? colorScheme.tertiary : colorScheme.error);
+
+    String title;
+    String subtitle;
+
+    if (score == 4) {
+      title = 'Maximum Security (4/4)';
+      subtitle = 'Your account has all security protections enabled.';
+    } else if (score >= 2) {
+      title = 'High Security ($score/4)';
+      subtitle = 'Turn on remaining protections to maximize security.';
+    } else {
+      title = 'Security Attention ($score/4)';
+      subtitle = 'Enable App Lock, Two-Step PIN, or verify your email.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: (isVerified ? colorScheme.primary : colorScheme.tertiary)
-            .withValues(alpha: 0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: (isVerified ? colorScheme.primary : colorScheme.tertiary)
-              .withValues(alpha: 0.2),
+          color: statusColor.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
@@ -408,7 +879,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isVerified ? colorScheme.primary : colorScheme.tertiary,
+              color: statusColor,
               shape: BoxShape.circle,
             ),
             child: const huge.HugeIcon(
@@ -423,9 +894,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isVerified
-                      ? 'Account Protected'
-                      : 'Security Attention Required',
+                  title,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -433,9 +902,7 @@ class _SecuritySettingsPageState extends State<SecuritySettingsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isVerified
-                      ? 'Your account email is verified and security parameters are active.'
-                      : 'Verify your email address to strengthen account protection.',
+                  subtitle,
                   style: TextStyle(
                     fontSize: 12,
                     color: colorScheme.onSurface.withValues(alpha: 0.7),

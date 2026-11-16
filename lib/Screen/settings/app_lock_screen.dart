@@ -13,13 +13,22 @@ class AppLockScreen extends StatefulWidget {
 class _AppLockScreenState extends State<AppLockScreen> {
   bool _isAuthenticating = false;
   String _errorMessage = '';
+  bool _hasPin = false;
 
   @override
   void initState() {
     super.initState();
+    _checkPinAvailability();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticate();
     });
+  }
+
+  Future<void> _checkPinAvailability() async {
+    final hasPin = await BiometricService.isTwoStepVerificationEnabled();
+    if (mounted) {
+      setState(() => _hasPin = hasPin);
+    }
   }
 
   Future<void> _authenticate() async {
@@ -32,7 +41,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
     }
 
     final bool authenticated = await BiometricService.authenticate(
-      reason: 'Unlock Cuqter ',
+      reason: 'Unlock Cuqter',
     );
 
     if (mounted) {
@@ -45,6 +54,115 @@ class _AppLockScreenState extends State<AppLockScreen> {
         });
       }
     }
+  }
+
+  void _showPinUnlockDialog() {
+    final pinController = TextEditingController();
+    String? pinError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: Row(
+                children: [
+                  huge.HugeIcon(
+                    icon: huge.HugeIcons.strokeRoundedLockPassword,
+                    color: colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Enter Security PIN'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Enter your 6-digit Security PIN to unlock the app.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: pinController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    obscureText: true,
+                    autofocus: true,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      letterSpacing: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '••••••',
+                      errorText: pinError,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final enteredPin = pinController.text.trim();
+                    if (enteredPin.length != 6) {
+                      setDialogState(() {
+                        pinError = 'PIN must be 6 digits';
+                      });
+                      return;
+                    }
+                    final isValid =
+                        await BiometricService.verifySecurityPin(enteredPin);
+                    if (isValid) {
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                      widget.onUnlocked();
+                    } else {
+                      setDialogState(() {
+                        pinError = 'Incorrect PIN. Please try again.';
+                      });
+                    }
+                  },
+                  child: const Text('Unlock'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -95,7 +213,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                 const SizedBox(height: 12),
 
                 Text(
-                  'Use your mobile fingerprint, Face ID, or passcode to unlock your application.',
+                  'Use your fingerprint, Face ID, or Security PIN to unlock your application.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -119,7 +237,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
                 const Spacer(),
 
-                // Unlock Button
+                // Unlock with Biometrics Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -157,6 +275,27 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     ),
                   ),
                 ),
+
+                if (_hasPin) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: _showPinUnlockDialog,
+                    icon: huge.HugeIcon(
+                      icon: huge.HugeIcons.strokeRoundedLockPassword,
+                      size: 20,
+                      color: colorScheme.primary,
+                    ),
+                    label: Text(
+                      'Unlock with Security PIN',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 32),
               ],
             ),

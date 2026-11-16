@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
@@ -8,6 +10,10 @@ class BiometricService {
 
   static bool isAuthenticating = false;
   static bool? _cachedAppLockEnabled;
+
+  static const String _timeoutKey = 'app_lock_timeout_seconds';
+  static const String _pinHashKey = 'two_step_pin_hash';
+  static const String _twoStepEnabledKey = 'two_step_verification_enabled';
 
   static Future<bool> isBiometricsAvailable() async {
     try {
@@ -64,5 +70,48 @@ class BiometricService {
     _cachedAppLockEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('app_lock_enabled', enabled);
+  }
+
+  static Future<int> getAppLockTimeoutSeconds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_timeoutKey) ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  static Future<void> setAppLockTimeoutSeconds(int seconds) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_timeoutKey, seconds);
+  }
+
+  static Future<bool> isTwoStepVerificationEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_twoStepEnabledKey) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> setTwoStepVerificationPin(String pin) async {
+    final hash = sha256.convert(utf8.encode(pin)).toString();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pinHashKey, hash);
+    await prefs.setBool(_twoStepEnabledKey, true);
+  }
+
+  static Future<bool> verifySecurityPin(String pin) async {
+    final inputHash = sha256.convert(utf8.encode(pin)).toString();
+    final prefs = await SharedPreferences.getInstance();
+    final storedHash = prefs.getString(_pinHashKey);
+    return storedHash != null && storedHash == inputHash;
+  }
+
+  static Future<void> disableTwoStepVerification() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pinHashKey);
+    await prefs.setBool(_twoStepEnabledKey, false);
   }
 }
