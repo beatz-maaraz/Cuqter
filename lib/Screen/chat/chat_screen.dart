@@ -34,6 +34,7 @@ import 'package:cuqter/services/local_storage_service.dart';
 import 'package:cuqter/media.dart';
 import 'package:cuqter/modules/wallpaper.dart';
 import 'package:cuqter/services/web_lifecycle.dart';
+import 'package:cuqter/services/notification_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String receiverId;
@@ -1079,6 +1080,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationService.activeChatUserId = widget.receiverId;
     _messageController.addListener(() {
       final hasText = _messageController.text.trim().isNotEmpty;
       if (_hasText != hasText) {
@@ -1406,6 +1408,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    if (NotificationService.activeChatUserId == widget.receiverId) {
+      NotificationService.activeChatUserId = null;
+    }
     _audioRecorder.dispose();
     _recordingTimer?.cancel();
     _messageController.dispose();

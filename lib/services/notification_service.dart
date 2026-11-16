@@ -255,16 +255,54 @@ Future<void> showMessageNotification(RemoteMessage message) async {
     String body = message.notification?.body ?? data['body'] ?? '';
     final String? messageType = data['type'];
 
-    if (messageType == 'video_call' || messageType == 'voice_call') {
-      final isVideo = messageType == 'video_call';
-      // body contains the roomId since it was sent as text
+    // 1. Handle incoming calls and call cancellations via Full-Screen Intent / CallKit
+    if (messageType == 'video_call' ||
+        messageType == 'voice_call' ||
+        messageType == 'call_invite') {
+      final isVideo =
+          messageType == 'video_call' || data['isVideoCall'] == 'true';
       await NotificationService.showIncomingCallNotification(
-        callerName: title,
-        roomId: body,
-        callerId: data['senderId'] ?? '',
+        callerName: data['callerName'] ?? title,
+        roomId: data['roomId'] ?? body,
+        callerId: data['callerId'] ?? data['senderId'] ?? '',
         isVideoCall: isVideo,
+        callerPic: data['callerPic'] ?? data['senderProfilePic'],
       );
       return; // Skip showing chat notification
+    }
+
+    if (messageType == 'call_cancel') {
+      final roomId = data['roomId'] ?? body;
+      if (roomId != null && roomId.isNotEmpty) {
+        await NotificationService.cancelCallNotification(roomId);
+      }
+      return;
+    }
+
+    // 2. Message deduplication: ignore if this messageId was already processed
+    final messageId = message.messageId;
+    if (messageId != null && messageId.isNotEmpty) {
+      if (NotificationService._recentlyProcessedMessageIds.contains(messageId)) {
+        return;
+      }
+      NotificationService._recentlyProcessedMessageIds.add(messageId);
+      if (NotificationService._recentlyProcessedMessageIds.length > 100) {
+        NotificationService._recentlyProcessedMessageIds.remove(
+          NotificationService._recentlyProcessedMessageIds.first,
+        );
+      }
+    }
+
+    // 3. Skip notification if user is actively viewing this chat conversation
+    final senderId = data['senderId'];
+    if (senderId != null && senderId == NotificationService.activeChatUserId) {
+      return;
+    }
+
+    // 4. On iOS, setForegroundNotificationPresentationOptions already shows the banner
+    // if a notification payload was present. Skip local notification to prevent duplicate banners.
+    if (!kIsWeb && Platform.isIOS && message.notification != null) {
+      return;
     }
 
     if (messageType == 'friend_request') {
@@ -338,7 +376,6 @@ Future<void> showMessageNotification(RemoteMessage message) async {
       body = body.split('|').first;
     }
     final chatId = data['chatId'];
-    final senderId = data['senderId'];
     final receiverId = data['receiverId'];
 
     // 1. Fetch sender's profile picture (use payload directly, fallback to Firestore)
@@ -472,6 +509,16 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static bool _isLocalNotificationsInitialized = false;
 
+  /// User ID of the currently active chat screen (used to suppress notifications for active conversation)
+  static String? activeChatUserId;
+  static String? activeChatId;
+
+  /// Tracks current ringing room to eliminate duplicate call triggers
+  static String? _activeRingingRoomId;
+
+  /// LRU cache of recently processed message IDs to eliminate duplicates
+  static final Set<String> _recentlyProcessedMessageIds = <String>{};
+
   static void _handleLocalNotificationClick(NotificationResponse response) {
     if (response.payload != null) {
       try {
@@ -567,6 +614,15 @@ class NotificationService {
   }) async {
     if (kIsWeb) return;
 
+    // Eliminate duplicate alerts: if this call is already ringing, ignore repeat triggers
+    if (_activeRingingRoomId == roomId) {
+      if (kDebugMode) {
+        print('Call $roomId is already ringing. Skipping duplicate alert.');
+      }
+      return;
+    }
+    _activeRingingRoomId = roomId;
+
     String finalCallerName = callerName;
     String? finalAvatarUrl = callerPic;
 
@@ -599,7 +655,7 @@ class NotificationService {
           : null,
       handle: isVideoCall ? 'Incoming Video Call' : 'Incoming Voice Call',
       type: isVideoCall ? 1 : 0,
-      duration: 30000,
+      duration: 35000,
       missedCallNotification: const NotificationParams(
         showNotification: true,
         isShowCallback: true,
@@ -611,6 +667,7 @@ class NotificationService {
         'callerId': callerId,
         'callerName': finalCallerName,
         'isVideoCall': isVideoCall,
+        'callerPic': finalAvatarUrl ?? '',
       },
       headers: <String, dynamic>{'apiKey': 'v1.0', 'platform': 'flutter'},
       android: const AndroidParams(
@@ -619,102 +676,38 @@ class NotificationService {
         ringtonePath: 'system_ringtone_default',
         backgroundColor: '#0955fa',
         actionColor: '#4CAF50',
+        textColor: '#ffffff',
+        incomingCallNotificationChannelName: 'Incoming Calls',
+        missedCallNotificationChannelName: 'Missed Calls',
+        isShowCallID: true,
       ),
       ios: const IOSParams(
         iconName: 'CallKitLogo',
-        handleType: '',
+        handleType: 'generic',
         supportsVideo: true,
-        maximumCallGroups: 2,
+        maximumCallGroups: 1,
         maximumCallsPerCallGroup: 1,
         audioSessionMode: 'default',
         audioSessionActive: true,
         audioSessionPreferredSampleRate: 44100.0,
         audioSessionPreferredIOBufferDuration: 0.005,
         supportsDTMF: true,
-        supportsHolding: true,
+        supportsHolding: false,
         supportsGrouping: false,
         supportsUngrouping: false,
         ringtonePath: 'system_ringtone_default',
       ),
     );
 
-    // Trigger native ConnectionService implementation
-    try {
-      const platform = MethodChannel('com.example.cuqter/telecom');
-      await platform.invokeMethod('showIncomingCall', {
-        'name': finalCallerName,
-        'number': isVideoCall ? 'Video Call' : 'Voice Call',
-        'avatar': finalAvatarUrl,
-      });
-    } catch (e) {
-      debugPrint('Error triggering native calling: $e');
-    }
-
+    // CallKit triggers Android Full-Screen Intent on Android and native CallKit UI on iOS
     await FlutterCallkitIncoming.showCallkitIncoming(params);
-
-    // Show heads-up local notification with Accept and Decline actions
-    await initializeLocalNotifications();
-
-    final List<AndroidNotificationAction> callActions = [
-      const AndroidNotificationAction(
-        'accept_call',
-        'Accept',
-        showsUserInterface: true,
-        cancelNotification: true,
-      ),
-      const AndroidNotificationAction(
-        'decline_call',
-        'Decline',
-        showsUserInterface: false,
-        cancelNotification: true,
-      ),
-    ];
-
-    final payloadData = {
-      'type': 'incoming_call',
-      'roomId': roomId,
-      'callerId': callerId,
-      'callerName': callerName,
-      'isVideoCall': isVideoCall,
-    };
-
-    final androidDetails = AndroidNotificationDetails(
-      'incoming_calls_channel',
-      'Incoming Calls',
-      channelDescription: 'Notifications for incoming audio and video calls',
-      importance: Importance.max,
-      priority: Priority.max,
-      category: AndroidNotificationCategory.call,
-      fullScreenIntent: true,
-      playSound: true,
-      ongoing: true,
-      autoCancel: false,
-      actions: callActions,
-      icon: '@mipmap/launcher_icon',
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-      categoryIdentifier: 'incoming_call_category',
-      interruptionLevel: InterruptionLevel.timeSensitive,
-    );
-
-    await localNotifications.show(
-      id: roomId.hashCode & 0x7FFFFFFF,
-      title: callerName,
-      body: 'Incoming ${isVideoCall ? "Video" : "Voice"} Call',
-      notificationDetails: NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      ),
-      payload: jsonEncode(payloadData),
-    );
   }
 
   static Future<void> cancelCallNotification(String roomId) async {
     if (kIsWeb) return;
+    if (_activeRingingRoomId == roomId) {
+      _activeRingingRoomId = null;
+    }
     await FlutterCallkitIncoming.endCall(roomId);
     await localNotifications.cancel(id: roomId.hashCode & 0x7FFFFFFF);
   }
@@ -829,10 +822,11 @@ class NotificationService {
           ?.createNotificationChannel(friendRequestChannel);
     }
 
-    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) {
+    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
 
       if (event is CallEventActionCallAccept) {
+        _activeRingingRoomId = null;
         final body = event.callKitParams;
         final roomId = body.id;
         final extra = body.extra ?? {};
@@ -869,17 +863,34 @@ class NotificationService {
       } else if (event is CallEventActionCallDecline ||
           event is CallEventActionCallEnded ||
           event is CallEventActionCallTimeout) {
+        _activeRingingRoomId = null;
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null) {
           FirebaseDatabase.instance
               .ref('incoming_calls/${currentUser.uid}')
               .remove();
         }
-        final dynamic params = (event as dynamic).callKitParams;
-        final String roomId = params?.id ?? '';
+        String roomId = '';
+        if (event is CallEventActionCallDecline) {
+          roomId = event.callKitParams.id;
+        } else if (event is CallEventActionCallEnded) {
+          roomId = event.callKitParams.id;
+        } else if (event is CallEventActionCallTimeout) {
+          roomId = event.id;
+        }
         if (roomId.isNotEmpty) {
           FirebaseDatabase.instance.ref('calls/$roomId').remove();
           localNotifications.cancel(id: roomId.hashCode & 0x7FFFFFFF);
+        }
+      } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
+        try {
+          final String? token =
+              await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+          if (token != null && token.isNotEmpty) {
+            await NotificationService()._updateVoipTokenInFirestore(token);
+          }
+        } catch (e) {
+          if (kDebugMode) print('Error updating VoIP token: $e');
         }
       }
     });
@@ -980,7 +991,46 @@ class NotificationService {
         }
       }
 
-      // 8. Listen to friend requests locally since cloud functions are unavailable
+      // 8. Handle app launch from terminated state via CallKit accept action
+      if (!kIsWeb) {
+        try {
+          final dynamic activeCalls = await FlutterCallkitIncoming.activeCalls();
+          if (activeCalls is List && activeCalls.isNotEmpty) {
+            final firstCall = activeCalls.first;
+            if (firstCall is Map && firstCall['accepted'] == true) {
+              final roomId = firstCall['id'] as String? ?? '';
+              final extra = (firstCall['extra'] as Map?) ?? {};
+              final callerId = extra['callerId'] as String? ?? '';
+              final callerName = extra['callerName'] as String? ??
+                  firstCall['nameCaller'] as String? ??
+                  'Unknown';
+              final isVideoCall = extra['isVideoCall'] == true;
+
+              if (roomId.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (navigatorKey.currentState != null) {
+                    navigatorKey.currentState!.popUntil((route) => route.isFirst);
+                    navigatorKey.currentState!.push(
+                      MaterialPageRoute(
+                        builder: (context) => CallScreen(
+                          roomId: roomId,
+                          receiverId: callerId,
+                          receiverName: callerName,
+                          isVideoCall: isVideoCall,
+                        ),
+                      ),
+                    );
+                  }
+                });
+              }
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) print('Error checking active CallKit calls on launch: $e');
+        }
+      }
+
+      // 9. Listen to friend requests locally since cloud functions are unavailable
       _listenForFriendRequests();
     } else {
       if (kDebugMode) {
@@ -1057,15 +1107,12 @@ class NotificationService {
   }
 
   /// Fetches the active FCM Token and stores it in Firestore.
+  /// On iOS, also retrieves the PushKit VoIP token.
   Future<void> saveDeviceToken() async {
     try {
       String? token;
-      if (!kIsWeb && Platform.isIOS) {
-        token = await _fcm.getAPNSToken();
-      }
       if (kIsWeb) {
         // NOTE: For web, a vapidKey is highly recommended/required.
-        // Replace this placeholder with your actual VAPID key from the Firebase Console (Project Settings -> Cloud Messaging -> Web configuration)
         token = await _fcm.getToken(
           vapidKey:
               "BF8MsbUwKvQ6TuATaIWu3j5V_g8vnZ5OjrRYvcHDmBlZaRvC6lqpqw0Q5At0Rj0WLq9mUjTXVfmbZbOhFPUliGg",
@@ -1077,14 +1124,29 @@ class NotificationService {
       if (token != null) {
         await _updateTokenInFirestore(token);
       }
+
+      // iOS Apple PushKit VoIP token
+      if (!kIsWeb && Platform.isIOS) {
+        try {
+          final voipToken =
+              await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+          if (voipToken != null && voipToken.isNotEmpty) {
+            await _updateVoipTokenInFirestore(voipToken);
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error getting PushKit VoIP token: $e');
+          }
+        }
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting FCM token: $e');
+        print('Error getting device tokens: $e');
       }
     }
   }
 
-  /// Persists token to Firestore users collection
+  /// Persists FCM token to Firestore users collection
   Future<void> _updateTokenInFirestore(String token) async {
     try {
       final currentUser = _auth.currentUser;
@@ -1099,6 +1161,25 @@ class NotificationService {
     } catch (e) {
       if (kDebugMode) {
         print('Error saving FCM token to Firestore: $e');
+      }
+    }
+  }
+
+  /// Persists iOS PushKit VoIP token to Firestore users collection
+  Future<void> _updateVoipTokenInFirestore(String voipToken) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && voipToken.isNotEmpty) {
+        await _firestore.collection('users').doc(currentUser.uid).update({
+          'voipToken': voipToken,
+        });
+        if (kDebugMode) {
+          print('PushKit VoIP Token successfully stored to Firestore: $voipToken');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error saving VoIP token to Firestore: $e');
       }
     }
   }

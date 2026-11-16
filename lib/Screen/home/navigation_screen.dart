@@ -101,8 +101,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
               callerPic: callerPic,
             );
 
-            // Push incoming call screen
-            if (mounted) {
+            // On Web, CallKit is not supported, so push Flutter IncomingCallScreen.
+            // On mobile (Android/iOS), Android Full-Screen Intent and iOS CallKit manage the incoming call UI without duplication.
+            if (kIsWeb && mounted) {
               Navigator.push(
                 context,
                 MaterialPageRoute(

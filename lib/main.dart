@@ -27,6 +27,51 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   }
+
+  final data = message.data;
+  final type = data['type'];
+
+  // 1. If it's a call invite or call cancellation, handle Full-Screen Intent / CallKit:
+  if (type == 'call_invite' || type == 'video_call' || type == 'voice_call') {
+    final roomId = data['roomId'] ?? message.notification?.body ?? '';
+    final callerName =
+        data['callerName'] ??
+        message.notification?.title ??
+        data['title'] ??
+        'Incoming Call';
+    final callerId = data['callerId'] ?? data['senderId'] ?? '';
+    final isVideoCall = data['isVideoCall'] == 'true' || type == 'video_call';
+    final callerPic = data['callerPic'] ?? data['senderProfilePic'];
+
+    if (roomId.isNotEmpty) {
+      await NotificationService.showIncomingCallNotification(
+        callerName: callerName,
+        roomId: roomId,
+        callerId: callerId,
+        isVideoCall: isVideoCall,
+        callerPic: callerPic,
+      );
+    }
+    return;
+  }
+
+  if (type == 'call_cancel') {
+    final roomId = data['roomId'];
+    if (roomId != null && roomId.isNotEmpty) {
+      await NotificationService.cancelCallNotification(roomId);
+    }
+    return;
+  }
+
+  // 2. Eliminate duplicate alerts:
+  // When the message payload contains a notification block, the OS (Android / iOS)
+  // automatically posts and displays the banner in the system tray.
+  // We MUST NOT show another local notification here, or the user receives duplicate alerts!
+  if (message.notification != null) {
+    return;
+  }
+
+  // 3. Fallback for data-only messages:
   await showMessageNotification(message);
 }
 
