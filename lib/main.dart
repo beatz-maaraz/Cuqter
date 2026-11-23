@@ -13,6 +13,7 @@ import 'package:cuqter/services/deep_link_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:cuqter/services/biometric_service.dart';
 import 'package:cuqter/Screen/settings/app_lock_screen.dart';
 import 'firebase_options.dart';
@@ -81,6 +82,7 @@ Future<void> main() async {
 
   // Optimize RAM usage and image decoding
   if (kIsWeb) {
+    BrowserContextMenu.disableContextMenu();
     PaintingBinding.instance.imageCache.maximumSize = 150;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 64 * 1024 * 1024;
   } else {

@@ -37,6 +37,21 @@
   <link rel="manifest" href="manifest.json">
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 
+  <!-- Preload Splash Screen LCP Image -->
+  <link rel="preload" as="image" href="splash/img/light-1x.png"
+        imagesrcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x"
+        media="(prefers-color-scheme: light)" fetchpriority="high">
+  <link rel="preload" as="image" href="splash/img/dark-1x.png"
+        imagesrcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x"
+        media="(prefers-color-scheme: dark)" fetchpriority="high">
+
+  <!-- Disable browser default context menu so Flutter widgets handle right clicks natively -->
+  <script>
+    window.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    });
+  </script>
+
   <!-- Firebase SDKs -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
@@ -80,6 +95,12 @@
       background-color: #BDA6CE;
       background-size: 100% 100%;
       overflow: hidden;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #121212;
+      }
     }
 
     .center {
@@ -162,12 +183,12 @@
   <picture id="splash-branding">
     <source srcset="splash/img/branding-1x.png 1x, splash/img/branding-2x.png 2x, splash/img/branding-3x.png 3x, splash/img/branding-4x.png 4x" media="(prefers-color-scheme: light)">
     <source srcset="splash/img/branding-dark-1x.png 1x, splash/img/branding-dark-2x.png 2x, splash/img/branding-dark-3x.png 3x, splash/img/branding-dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-    <img class="bottom" aria-hidden="true" src="splash/img/branding-1x.png" alt="">
+    <img class="bottom" aria-hidden="true" src="splash/img/branding-1x.png" alt="" decoding="async">
   </picture>
   <picture id="splash">
     <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
     <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-    <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
+    <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="" fetchpriority="high" decoding="sync">
   </picture>
 
   <!-- Flutter bootstrap loader -->

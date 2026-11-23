@@ -388,6 +388,180 @@ class _HomepageState extends State<Homepage>
     );
   }
 
+  void _showChatContextMenu(
+    BuildContext context,
+    Offset tapPosition,
+    String otherUserId,
+    Map<String, dynamic> userData,
+    List<dynamic> pinnedChats,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(tapPosition, tapPosition),
+      Offset.zero & overlay.size,
+    );
+
+    final isPinned = pinnedChats.contains(otherUserId);
+
+    final userName = userData['name']?.toString() ?? 'Unknown User';
+    final profilePic = userData['profilepic']?.toString();
+    final isOnline = userData['isOnline'] == true;
+
+    showMenu(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: colorScheme.surfaceContainerHighest,
+      elevation: 6,
+      items: <PopupMenuEntry<dynamic>>[
+        PopupMenuItem(
+          height: 38,
+          onTap: () {
+            if (widget.isDesktop && widget.onChatSelected != null) {
+              widget.onChatSelected!(
+                otherUserId,
+                userName,
+                profilePic,
+                isOnline,
+              );
+            } else {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      ChatScreen(
+                    receiverId: otherUserId,
+                    receiverName: userName,
+                    receiverProfilePic: profilePic,
+                    receiverIsOnline: isOnline,
+                    isDesktop: widget.isDesktop,
+                  ),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                      child: FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  transitionDuration: const Duration(milliseconds: 250),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 18,
+                color: colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Open Chat',
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          height: 38,
+          onTap: () async {
+            await _pinChat(otherUserId);
+          },
+          child: Row(
+            children: [
+              Icon(
+                isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                size: 18,
+                color: colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isPinned ? 'Unpin Chat' : 'Pin Chat',
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          height: 38,
+          onTap: () {
+            setState(() {
+              _isSelectionMode = true;
+              _selectedUserIds.add(otherUserId);
+            });
+          },
+          child: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline_rounded,
+                size: 18,
+                color: colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Select',
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 1),
+        PopupMenuItem(
+          height: 38,
+          onTap: () {
+            setState(() {
+              _selectedUserIds.clear();
+              _selectedUserIds.add(otherUserId);
+            });
+            _showDeleteConfirmDialog();
+          },
+          child: const Row(
+            children: [
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: Color(0xFFE57373),
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Delete Chat',
+                style: TextStyle(
+                  color: Color(0xFFE57373),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -905,6 +1079,15 @@ class _HomepageState extends State<Homepage>
                                   _isSelectionMode = true;
                                   _selectedUserIds.add(userId);
                                 });
+                              },
+                              onSecondaryTapDown: (details) {
+                                _showChatContextMenu(
+                                  context,
+                                  details.globalPosition,
+                                  userId,
+                                  userData,
+                                  pinnedChats,
+                                );
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),

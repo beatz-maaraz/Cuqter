@@ -98,6 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // ── Multi-select ─────────────────────────────────────────
   bool _isSelecting = false;
   final Set<String> _selectedMessageIds = {};
+  Offset? _lastMessageTapPosition;
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
@@ -191,12 +192,198 @@ class _ChatScreenState extends State<ChatScreen> {
     BuildContext context,
     Map<String, dynamic> message,
     String docId,
-    bool isMe,
-  ) {
+    bool isMe, {
+    Offset? tapPosition,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final String text = message['text']?.toString() ?? '';
     final String type = message['type']?.toString() ?? 'text';
     HapticFeedback.mediumImpact();
+
+    // On Desktop and Web with right-click mouse, open sleek cursor-positioned context menu
+    if ((kIsWeb || widget.isDesktop) && tapPosition != null) {
+      final overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox?;
+      if (overlay != null) {
+        final position = RelativeRect.fromRect(
+          Rect.fromPoints(tapPosition, tapPosition),
+          Offset.zero & overlay.size,
+        );
+        showMenu(
+          context: context,
+          position: position,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          color: colorScheme.surfaceContainerHighest,
+          elevation: 8,
+          items: <PopupMenuEntry<dynamic>>[
+            PopupMenuItem(
+              enabled: false,
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: ['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) {
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        await _sendReaction(docId, emoji);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const PopupMenuDivider(height: 1),
+            PopupMenuItem(
+              height: 38,
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Message copied'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.copy_rounded,
+                    size: 18,
+                    color: colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Copy',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              height: 38,
+              onTap: () {
+                setState(() {
+                  _replyMessage = {'id': docId, ...message};
+                });
+                _focusNode.requestFocus();
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.reply_rounded,
+                    size: 18,
+                    color: colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Reply',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              height: 38,
+              onTap: () {
+                _showForwardSheet(text, type);
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.forward_rounded,
+                    size: 18,
+                    color: colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Forward',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              height: 38,
+              onTap: () {
+                setState(() {
+                  _isSelecting = true;
+                  _selectedMessageIds.add(docId);
+                });
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 18,
+                    color: colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Select',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isMe) ...<PopupMenuEntry<dynamic>>[
+              const PopupMenuDivider(height: 1),
+              PopupMenuItem(
+                height: 38,
+                onTap: () async {
+                  await _deleteSingleMessage(docId);
+                },
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: Color(0xFFE57373),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Delete',
+                      style: TextStyle(
+                        color: Color(0xFFE57373),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+        return;
+      }
+    }
 
     Widget buildActionItem(BuildContext ctx, IconData icon, String label, VoidCallback onTap, {bool isDestructive = false}) {
       final color = isDestructive ? const Color(0xFFE57373) : colorScheme.onSurface;
@@ -234,9 +421,12 @@ class _ChatScreenState extends State<ChatScreen> {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 // 1. Floating Reaction Pill
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -324,7 +514,9 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }
@@ -2338,12 +2530,30 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ? Alignment.centerRight
                                             : Alignment.centerLeft,
                                         child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onLongPressStart: (details) =>
+                                              _lastMessageTapPosition =
+                                                  details.globalPosition,
                                           onLongPress: () =>
                                               _showMessageContextMenu(
                                                 context,
                                                 message,
                                                 docId,
                                                 isMe,
+                                                tapPosition:
+                                                    _lastMessageTapPosition,
+                                              ),
+                                          onSecondaryTapDown: (details) =>
+                                              _lastMessageTapPosition =
+                                                  details.globalPosition,
+                                          onSecondaryTap: () =>
+                                              _showMessageContextMenu(
+                                                context,
+                                                message,
+                                                docId,
+                                                isMe,
+                                                tapPosition:
+                                                    _lastMessageTapPosition,
                                               ),
                                           onTap: _isSelecting
                                               ? () => setState(() {

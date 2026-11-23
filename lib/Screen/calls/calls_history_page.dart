@@ -987,8 +987,16 @@ class _CallsHistoryPageState extends State<CallsHistoryPage>
               width: 1.5,
             ),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onSecondaryTap: () {
+              setState(() {
+                _isSelectionMode = true;
+                _selectedDocIds.addAll(allDocIds);
+              });
+            },
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 2,
             ),
@@ -1140,6 +1148,7 @@ class _CallsHistoryPageState extends State<CallsHistoryPage>
                       ),
                     ],
                   ),
+            ),
           ),
         );
       },
