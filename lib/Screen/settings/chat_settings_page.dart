@@ -215,12 +215,14 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                                 margin: const EdgeInsets.only(right: 12),
                                 decoration: BoxDecoration(
                                   color: wp.type == WallpaperType.color
-                                      ? wp.color
-                                      : Colors.grey[200],
-                                  image: wp.type == WallpaperType.asset
+                                      ? (wp.color ?? const Color(0xFF000000))
+                                      : const Color(0xFF000000),
+                                  image: (wp.type == WallpaperType.asset &&
+                                          wp.path != null)
                                       ? DecorationImage(
                                           image: AssetImage(wp.path!),
                                           fit: wp.fit,
+                                          onError: (e, s) {},
                                         )
                                       : null,
                                   shape: BoxShape.circle,
