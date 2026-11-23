@@ -35,6 +35,8 @@ import 'package:cuqter/media.dart';
 import 'package:cuqter/modules/wallpaper.dart';
 import 'package:cuqter/services/web_lifecycle.dart';
 import 'package:cuqter/services/notification_service.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:cuqter/Screen/chat/dropped_files_preview_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   final String receiverId;
@@ -99,6 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isSelecting = false;
   final Set<String> _selectedMessageIds = {};
   Offset? _lastMessageTapPosition;
+  bool _isDragging = false;
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
@@ -2166,19 +2169,37 @@ class _ChatScreenState extends State<ChatScreen> {
             )
           : null,
       body: _isLoadingWallpaper
-
           ? const Center(child: CircularProgressIndicator())
-          : PopScope(
-              canPop: !_showEmojiPicker,
-              onPopInvokedWithResult: (bool didPop, dynamic result) {
-                if (didPop) return;
-                if (_showEmojiPicker) {
-                  setState(() {
-                    _showEmojiPicker = false;
-                  });
-                }
+          : DropTarget(
+              onDragEntered: (detail) {
+                setState(() {
+                  _isDragging = true;
+                });
               },
-              child: Container(
+              onDragExited: (detail) {
+                setState(() {
+                  _isDragging = false;
+                });
+              },
+              onDragDone: (detail) {
+                setState(() {
+                  _isDragging = false;
+                });
+                _handleDroppedFiles(detail.files);
+              },
+              child: PopScope(
+                canPop: !_showEmojiPicker,
+                onPopInvokedWithResult: (bool didPop, dynamic result) {
+                  if (didPop) return;
+                  if (_showEmojiPicker) {
+                    setState(() {
+                      _showEmojiPicker = false;
+                    });
+                  }
+                },
+                child: Stack(
+                  children: [
+                    Container(
                 decoration: BoxDecoration(
                   color: _customWallpaperUrl == null
                       ? (() {
@@ -2786,8 +2807,258 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
-            ),
+              if (_isDragging)
+                Positioned.fill(
+                  child: _buildDropOverlay(),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Widget _buildDropOverlay() {
+    final contactName =
+        widget.receiverName.isNotEmpty ? widget.receiverName : 'Contact';
+    return Container(
+      color: Colors.black.withValues(alpha: 0.82),
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.4),
+              width: 2.0,
+              strokeAlign: BorderSide.strokeAlignInside,
+            ),
+            color: Colors.white.withValues(alpha: 0.04),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.upload_file_rounded,
+                  size: 48,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Drop files here to send to $contactName',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDroppedFiles(List<XFile> rawFiles) async {
+    if (rawFiles.isEmpty) return;
+
+    final validFiles = <XFile>[];
+    int emptyCount = 0;
+
+    for (final xfile in rawFiles) {
+      try {
+        final length = await xfile.length();
+        if (length <= 0) {
+          emptyCount++;
+        } else {
+          validFiles.add(xfile);
+        }
+      } catch (_) {
+        emptyCount++;
+      }
+    }
+
+    if (emptyCount > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            emptyCount == 1
+                ? 'Ignored 1 empty folder or 0-byte file.'
+                : 'Ignored  empty folders or 0-byte files.',
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          backgroundColor: const Color(0xFF1E1E1E),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    if (validFiles.isEmpty || !mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.8),
+      builder: (ctx) => DroppedFilesPreviewDialog(
+        files: validFiles,
+        contactName: widget.receiverName,
+        onSend: (List<XFile> filesToSend, String caption) {
+          _sendDroppedFiles(filesToSend, caption);
+        },
+      ),
+    );
+  }
+
+  Future<void> _sendDroppedFiles(
+    List<XFile> filesToSend,
+    String caption,
+  ) async {
+    for (int i = 0; i < filesToSend.length; i++) {
+      if (_uploadCancelled) break;
+      final xfile = filesToSend[i];
+      try {
+        final bytes = await xfile.readAsBytes();
+        final fileName = xfile.name;
+        final ext = fileName.split('.').last.toLowerCase();
+
+        String type = 'document';
+        String folder = 'cuqter_media/Document';
+        String resourceType = 'auto';
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].contains(ext)) {
+          type = 'image';
+          folder = 'cuqter_media/Photo';
+          resourceType = 'image';
+        } else if (['mp4', 'mov', 'mkv', 'avi', 'webm', 'flv', '3gp']
+            .contains(ext)) {
+          type = 'video';
+          folder = 'cuqter_media/Video';
+          resourceType = 'video';
+        } else if (['mp3', 'wav', 'm4a', 'aac', 'ogg', 'opus', 'flac']
+            .contains(ext)) {
+          type = 'audio';
+          folder = 'cuqter_media/Audio';
+          resourceType = 'audio';
+        }
+
+        setState(() {
+          _isUploading = true;
+          _uploadCancelled = false;
+          _uploadingFileName = fileName;
+          _uploadingFileSize = _formatFileSize(bytes.length);
+          _uploadingFileType = type;
+          _uploadProgress = 0.0;
+        });
+
+        String? localPath;
+        if (!kIsWeb) {
+          localPath = await LocalStorageService.saveFileLocally(
+            '_',
+            bytes,
+            type,
+          );
+        }
+
+        final uploadResult = await CloudinaryService.uploadFile(
+          fileBytes: localPath == null ? bytes : null,
+          filePath: localPath,
+          folderPath: folder,
+          fileName:
+              '_',
+          resourceType: resourceType,
+          onProgress: (progress) {
+            if (mounted) {
+              setState(() {
+                _uploadProgress = progress;
+              });
+            }
+          },
+        );
+
+        if (_uploadCancelled) break;
+
+        if (uploadResult != null && uploadResult['url'] != null) {
+          String finalUrl = uploadResult['url']!;
+          if (type == 'image') {
+            finalUrl = finalUrl.replaceFirst(
+              '/upload/',
+              '/upload/q_auto,f_auto/',
+            );
+          }
+          if (localPath != null) {
+            _localFilePaths[finalUrl] = localPath;
+          }
+
+          String chatId =
+              getChatId(_auth.currentUser!.uid, widget.receiverId);
+          final replyParams = _getReplyParams();
+          _clearReply();
+
+          String messageText = '|';
+          if (type == 'document') {
+            messageText =
+                '||';
+          }
+
+          await _messageService.sendMessage(
+            chatId: chatId,
+            senderId: _auth.currentUser!.uid,
+            receiverId: widget.receiverId,
+            text: messageText,
+            type: type,
+            replyToId: replyParams['replyToId'],
+            replyToText: replyParams['replyToText'],
+            replyToSenderId: replyParams['replyToSenderId'],
+            replyToType: replyParams['replyToType'],
+          );
+
+          if (caption.trim().isNotEmpty && i == 0) {
+            await _messageService.sendMessage(
+              chatId: chatId,
+              senderId: _auth.currentUser!.uid,
+              receiverId: widget.receiverId,
+              text: caption.trim(),
+              type: 'text',
+            );
+          }
+        } else {
+          if (!_uploadCancelled && mounted) {
+            _showErrorSnackBar('Failed to upload ');
+          }
+        }
+      } catch (e) {
+        if (!_uploadCancelled && mounted) {
+          _showErrorSnackBar('Failed to send file: ');
+        }
+      }
+    }
+
+    if (mounted && !_uploadCancelled) {
+      setState(() {
+        _isUploading = false;
+        _uploadingFileName = null;
+        _uploadingFileSize = null;
+        _uploadingFileType = null;
+        _uploadProgress = 0.0;
+      });
+    }
   }
 
   Widget _buildReplyPreviewBar(BuildContext context) {
