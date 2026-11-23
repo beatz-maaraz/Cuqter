@@ -2813,7 +2813,9 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               if (_isDragging)
                 Positioned.fill(
-                  child: _buildDropOverlay(),
+                  child: IgnorePointer(
+                    child: _buildDropOverlay(),
+                  ),
                 ),
             ],
           ),
@@ -2903,7 +2905,7 @@ class _ChatScreenState extends State<ChatScreen> {
           content: Text(
             emptyCount == 1
                 ? 'Ignored 1 empty folder or 0-byte file.'
-                : 'Ignored  empty folders or 0-byte files.',
+                : 'Ignored $emptyCount empty folders or 0-byte files.',
             style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
           backgroundColor: const Color(0xFF1E1E1E),
@@ -2940,8 +2942,14 @@ class _ChatScreenState extends State<ChatScreen> {
       final xfile = filesToSend[i];
       try {
         final bytes = await xfile.readAsBytes();
-        final fileName = xfile.name;
-        final ext = fileName.split('.').last.toLowerCase();
+        final rawFileName = xfile.name.isNotEmpty
+            ? xfile.name
+            : xfile.path.split(RegExp(r'[\\/]')).last;
+        final cleanFileName = rawFileName.replaceAll(' ', '_');
+        final uniqueFileName =
+            '${DateTime.now().millisecondsSinceEpoch}_$cleanFileName';
+        final ext = rawFileName.split('.').last.toLowerCase();
+        final formattedSize = _formatFileSize(bytes.length);
 
         String type = 'document';
         String folder = 'cuqter_media/Document';
@@ -2959,14 +2967,14 @@ class _ChatScreenState extends State<ChatScreen> {
             .contains(ext)) {
           type = 'audio';
           folder = 'cuqter_media/Audio';
-          resourceType = 'audio';
+          resourceType = 'video'; // Cloudinary uses video resourceType for audio
         }
 
         setState(() {
           _isUploading = true;
           _uploadCancelled = false;
-          _uploadingFileName = fileName;
-          _uploadingFileSize = _formatFileSize(bytes.length);
+          _uploadingFileName = rawFileName;
+          _uploadingFileSize = formattedSize;
           _uploadingFileType = type;
           _uploadProgress = 0.0;
         });
@@ -2974,18 +2982,17 @@ class _ChatScreenState extends State<ChatScreen> {
         String? localPath;
         if (!kIsWeb) {
           localPath = await LocalStorageService.saveFileLocally(
-            '_',
+            uniqueFileName,
             bytes,
             type,
           );
         }
 
         final uploadResult = await CloudinaryService.uploadFile(
-          fileBytes: localPath == null ? bytes : null,
-          filePath: localPath,
+          fileBytes: (kIsWeb || localPath == null) ? bytes : null,
+          filePath: kIsWeb ? null : localPath,
           folderPath: folder,
-          fileName:
-              '_',
+          fileName: uniqueFileName,
           resourceType: resourceType,
           onProgress: (progress) {
             if (mounted) {
@@ -3015,10 +3022,9 @@ class _ChatScreenState extends State<ChatScreen> {
           final replyParams = _getReplyParams();
           _clearReply();
 
-          String messageText = '|';
+          String messageText = '$finalUrl|$formattedSize';
           if (type == 'document') {
-            messageText =
-                '||';
+            messageText = '$finalUrl|$formattedSize|$rawFileName';
           }
 
           await _messageService.sendMessage(
@@ -3044,12 +3050,12 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         } else {
           if (!_uploadCancelled && mounted) {
-            _showErrorSnackBar('Failed to upload ');
+            _showErrorSnackBar('Failed to upload $rawFileName to Cloudinary');
           }
         }
       } catch (e) {
         if (!_uploadCancelled && mounted) {
-          _showErrorSnackBar('Failed to send file: ');
+          _showErrorSnackBar('Failed to send file: $e');
         }
       }
     }
