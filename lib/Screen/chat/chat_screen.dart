@@ -1167,11 +1167,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         width: 60,
                         margin: const EdgeInsets.only(right: 12),
                         decoration: BoxDecoration(
-                          color: wp.type == WallpaperType.theme
-                              ? Colors.transparent
-                              : (wp.type == WallpaperType.color
-                                    ? wp.color
-                                    : Colors.transparent),
+                          color: wp.type == WallpaperType.color
+                              ? (wp.color ?? const Color(0xFF000000))
+                              : const Color(0xFF000000),
                           image: wp.type == WallpaperType.theme
                               ? DecorationImage(
                                   image: AssetImage(
@@ -1181,11 +1179,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                         : 'assets/Wallpaper/light.png',
                                   ),
                                   fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {},
                                 )
-                              : (wp.type == WallpaperType.asset
+                              : (wp.type == WallpaperType.asset &&
+                                      wp.path != null
                                     ? DecorationImage(
                                         image: AssetImage(wp.path!),
                                         fit: BoxFit.cover,
+                                        onError: (exception, stackTrace) {},
                                       )
                                     : null),
                           shape: BoxShape.circle,
@@ -2209,14 +2210,13 @@ class _ChatScreenState extends State<ChatScreen> {
                             index = 0;
                           }
                           final wp = ChatWallpaper.defaultWallpapers[index];
-                          if (wp.type == WallpaperType.theme) {
-                            return Colors.transparent;
+                          if (wp.type == WallpaperType.color &&
+                              wp.color != null) {
+                            return wp.color!;
                           }
-                          return wp.type == WallpaperType.color
-                              ? wp.color
-                              : Colors.transparent;
+                          return const Color(0xFF000000);
                         })()
-                      : null,
+                      : const Color(0xFF000000),
                   image: _customWallpaperUrl != null
                       ? DecorationImage(
                           image: kIsWeb
@@ -2224,6 +2224,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               : FileImage(File(_customWallpaperUrl!))
                                     as ImageProvider,
                           fit: BoxFit.cover,
+                          onError: (exception, stackTrace) {},
                         )
                       : (() {
                           int index = _wallpaperIndex;
@@ -2240,12 +2241,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                     : 'assets/Wallpaper/light.png',
                               ),
                               fit: BoxFit.cover,
+                              onError: (exception, stackTrace) {},
                             );
                           }
-                          return wp.type == WallpaperType.asset
+                          return (wp.type == WallpaperType.asset &&
+                                  wp.path != null)
                               ? DecorationImage(
                                   image: AssetImage(wp.path!),
                                   fit: wp.fit,
+                                  onError: (exception, stackTrace) {},
                                 )
                               : null;
                         })(),

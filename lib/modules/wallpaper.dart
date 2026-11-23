@@ -20,5 +20,7 @@ class ChatWallpaper {
       type: WallpaperType.theme,
     ), // Automatically adapts to light/dark mode
     ChatWallpaper(type: WallpaperType.asset, path: 'assets/Wallpaper/1.png'),
+    ChatWallpaper(type: WallpaperType.asset, path: 'assets/Wallpaper/dark.png'),
+    ChatWallpaper(type: WallpaperType.asset, path: 'assets/Wallpaper/light.png'),
   ];
 }
