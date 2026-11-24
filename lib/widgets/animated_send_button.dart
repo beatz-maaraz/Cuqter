@@ -98,7 +98,7 @@ class _AnimatedSendButtonState extends State<AnimatedSendButton>
         height: widget.radius * 2,
         decoration: BoxDecoration(
           color: _isPressed
-              ? (widget.pressedColor ?? const Color(0xFF4B2138))
+              ? (widget.pressedColor ?? const Color(0xFF49769F))
               : widget.backgroundColor,
           shape: BoxShape.circle,
         ),

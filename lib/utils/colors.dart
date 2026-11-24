@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Cuqter Core Palette (Visual Hierarchy Breakdown)
-  static const Color baseScreen = Color(0xFF1B0C1A);
-  static const Color persistentBar = Color(0xFF2D222F);
-  static const Color interactiveContainer = Color(0xFF4B2138);
-  static const Color interactiveFocus = Color(0xFF6D3C52);
-  static const Color textPrimary = Color(0xFFFADCD5);
-  static const Color textSecondary = Color(0xFF765D67);
+  // Cuqter Core Palette
+  static const Color baseScreen = Color(0xFF001D39);
+  static const Color persistentBar = Color(0xFF0A4174);
+  static const Color interactiveContainer = Color(0xFF49769F);
+  static const Color interactiveFocus = Color(0xFF4E8EA2);
+  static const Color textSecondary = Color(0xFF6EA2B3);
+  static const Color accentHighlight = Color(0xFF7BBDE8);
+  static const Color textPrimary = Color(0xFFBDD8E9);
 
   // Backgrounds
   static const Color mainBackground = baseScreen;
@@ -26,11 +27,11 @@ class AppColors {
   static const Color secondaryText = textSecondary;
 
   // Accent & States
-  static const Color accent = interactiveFocus;
+  static const Color accent = accentHighlight;
   static const Color onlineSuccess = Color(0xFF55B879);
   static const Color warning = Color(0xFFE3A83B);
   static const Color errorFailed = Color(0xFFD95C5C);
-  static const Color infoLinks = Color(0xFF5B9BD5);
+  static const Color infoLinks = accentHighlight;
 
   // Borders/Dividers
   static const Color divider = persistentBar;
