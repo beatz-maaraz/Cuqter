@@ -5,6 +5,7 @@ class AnimatedSendButton extends StatefulWidget {
   final VoidCallback onTap;
   final Color backgroundColor;
   final Color iconColor;
+  final Color? pressedColor;
   final double iconSize;
   final double radius;
 
@@ -13,6 +14,7 @@ class AnimatedSendButton extends StatefulWidget {
     required this.onTap,
     required this.backgroundColor,
     required this.iconColor,
+    this.pressedColor,
     this.iconSize = 22.0,
     this.radius = 24.0,
   });
@@ -26,6 +28,7 @@ class _AnimatedSendButtonState extends State<AnimatedSendButton>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotationAnimation;
+  bool _isPressed = false;
 
   @override
   void initState() {
@@ -85,10 +88,21 @@ class _AnimatedSendButtonState extends State<AnimatedSendButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
       onTap: _handleTap,
-      child: CircleAvatar(
-        backgroundColor: widget.backgroundColor,
-        radius: widget.radius,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: widget.radius * 2,
+        height: widget.radius * 2,
+        decoration: BoxDecoration(
+          color: _isPressed
+              ? (widget.pressedColor ?? const Color(0xFF4B2138))
+              : widget.backgroundColor,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {

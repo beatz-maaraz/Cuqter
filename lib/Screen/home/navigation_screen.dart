@@ -1,3 +1,4 @@
+import 'package:cuqter/utils/colors.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cuqter/Screen/profile/profile_screen.dart';
@@ -199,7 +200,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final unselectedColor = isDark
-        ? colorScheme.onSurface.withValues(alpha: 0.45)
+        ? AppColors.textSecondary
         : const Color(0xFF4B5563);
 
     return Expanded(
@@ -216,8 +217,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 2),
             padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
             decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(25),
+              color: isSelected
+                  ? (isDark ? AppColors.interactiveContainer : colorScheme.primary.withValues(alpha: 0.12))
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -230,7 +233,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                   child: huge.HugeIcon(
                     icon: isSelected ? activeIcon : icon,
                     color: isSelected
-                        ? colorScheme.primary
+                        ? (isDark ? AppColors.textPrimary : colorScheme.primary)
                         : unselectedColor,
                     size: 19,
                   ),
@@ -243,7 +246,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     fontSize: 9.5,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected
-                        ? colorScheme.primary
+                        ? (isDark ? AppColors.textPrimary : colorScheme.primary)
                         : unselectedColor,
                     letterSpacing: 0.3,
                   ),
@@ -263,7 +266,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final unselectedColor = isDark
-        ? colorScheme.onSurface.withValues(alpha: 0.45)
+        ? AppColors.textSecondary
         : const Color(0xFF4B5563);
 
     return Expanded(
@@ -280,8 +283,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 2),
             padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
             decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(25),
+              color: isSelected
+                  ? (isDark ? AppColors.interactiveContainer : colorScheme.primary.withValues(alpha: 0.12))
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -305,7 +310,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             ? BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: colorScheme.primary,
+                                  color: isDark ? AppColors.interactiveFocus : colorScheme.primary,
                                   width: 1.5,
                                 ),
                               )
@@ -338,7 +343,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     fontSize: 9.5,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected
-                        ? colorScheme.primary
+                        ? (isDark ? AppColors.textPrimary : colorScheme.primary)
                         : unselectedColor,
                     letterSpacing: 0.3,
                   ),
@@ -354,7 +359,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -393,14 +397,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.95)
+                          ? AppColors.persistentBar
                           : const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(
                         color: isDark
-                            ? colorScheme.onSurface.withValues(
-                                alpha: 0.12,
-                              )
+                            ? AppColors.divider
                             : const Color(0xFFE5E7EB),
                         width: 1.5,
                       ),
@@ -440,14 +442,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.60)
+                            ? AppColors.persistentBar.withValues(alpha: 0.92)
                             : const Color(0xFFF3F4F6).withValues(alpha: 0.94),
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(
                           color: isDark
-                              ? colorScheme.onSurface.withValues(
-                                  alpha: 0.12,
-                                )
+                              ? AppColors.divider
                               : const Color(0xFFE5E7EB),
                           width: 1.5,
                         ),

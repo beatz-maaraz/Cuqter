@@ -1,3 +1,4 @@
+import 'package:cuqter/utils/colors.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -511,7 +512,13 @@ class _CallScreenState extends State<CallScreen> {
                 top: 12,
                 left: 16,
                 right: 16,
-                child: Row(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.baseScreen.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -519,7 +526,7 @@ class _CallScreenState extends State<CallScreen> {
                     IconButton(
                       icon: const huge.HugeIcon(
                         icon: huge.HugeIcons.strokeRoundedArrowDown01,
-                        color: Colors.white,
+                        color: AppColors.textSecondary,
                         size: 28,
                       ),
                       onPressed: () => _hangUp(),
@@ -533,7 +540,7 @@ class _CallScreenState extends State<CallScreen> {
                           widget.receiverName,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -548,8 +555,8 @@ class _CallScreenState extends State<CallScreen> {
                                     ? 'Calling...'
                                     : 'Connecting...')
                               : _formatDuration(_callDurationInSeconds),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.75),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -561,7 +568,7 @@ class _CallScreenState extends State<CallScreen> {
                     IconButton(
                       icon: const huge.HugeIcon(
                         icon: huge.HugeIcons.strokeRoundedUserAdd01,
-                        color: Colors.white,
+                        color: AppColors.textSecondary,
                         size: 26,
                       ),
                       onPressed: () {
@@ -575,6 +582,7 @@ class _CallScreenState extends State<CallScreen> {
                       },
                     ),
                   ],
+                ),
                 ),
               ),
 
@@ -590,10 +598,10 @@ class _CallScreenState extends State<CallScreen> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: AppColors.interactiveContainer,
                       borderRadius: BorderRadius.circular(50),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.divider,
                         width: 1.5,
                       ),
                       boxShadow: [
@@ -615,9 +623,9 @@ class _CallScreenState extends State<CallScreen> {
                               ? huge.HugeIcons.strokeRoundedVolumeHigh
                               : huge.HugeIcons.strokeRoundedVolumeOff,
                           color: _isSpeakerOn
-                              ? Colors.white.withValues(alpha: 0.25)
-                              : Colors.white12,
-                          iconColor: Colors.white,
+                              ? AppColors.interactiveFocus
+                              : AppColors.persistentBar,
+                          iconColor: AppColors.textPrimary,
                           onTap: _toggleSpeaker,
                         ),
                         const SizedBox(width: 16),
@@ -629,8 +637,8 @@ class _CallScreenState extends State<CallScreen> {
                               : huge.HugeIcons.strokeRoundedMic01,
                           color: _isMicMuted
                               ? Colors.red.withValues(alpha: 0.8)
-                              : Colors.white.withValues(alpha: 0.25),
-                          iconColor: Colors.white,
+                              : AppColors.interactiveFocus,
+                          iconColor: AppColors.textPrimary,
                           onTap: _toggleMic,
                         ),
 
@@ -642,15 +650,15 @@ class _CallScreenState extends State<CallScreen> {
                                 : huge.HugeIcons.strokeRoundedVideo01,
                             color: _isVideoDisabled
                                 ? Colors.red.withValues(alpha: 0.8)
-                                : Colors.white.withValues(alpha: 0.25),
-                            iconColor: Colors.white,
+                                : AppColors.interactiveFocus,
+                            iconColor: AppColors.textPrimary,
                             onTap: _toggleCamera,
                           ),
                           const SizedBox(width: 16),
                           _buildPillControlButton(
                             icon: huge.HugeIcons.strokeRoundedCameraRotated01,
-                            color: Colors.white.withValues(alpha: 0.25),
-                            iconColor: Colors.white,
+                            color: AppColors.persistentBar,
+                            iconColor: AppColors.textPrimary,
                             onTap: _switchCamera,
                           ),
                         ],

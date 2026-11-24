@@ -1,3 +1,4 @@
+import 'package:cuqter/utils/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,16 +15,6 @@ class AppearanceSettingsPage extends StatefulWidget {
 class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
   int _selectedIconIndex = 0;
   bool _isLoading = true;
-
-  final List<Map<String, dynamic>> _accentColors = [
-    {'name': 'Violet', 'color': const Color(0xFF7C3AED)},
-    {'name': 'Sky Blue', 'color': const Color(0xFF0EA5E9)},
-    {'name': 'Emerald', 'color': const Color(0xFF10B981)},
-    {'name': 'Coral', 'color': const Color(0xFFF43F5E)},
-    {'name': 'Sunset', 'color': const Color(0xFFF97316)},
-    {'name': 'Rose Pink', 'color': const Color(0xFFEC4899)},
-    {'name': 'Royal Indigo', 'color': const Color(0xFF3F51B5)},
-  ];
 
   final List<Map<String, dynamic>> _appIcons = [
     {
@@ -113,10 +104,6 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                 const SizedBox(height: 12),
                 _buildThemeSelector(themeProvider, colorScheme),
                 const SizedBox(height: 30),
-                _buildSectionLabel('ACCENT COLOR'),
-                const SizedBox(height: 12),
-                _buildAccentColorPicker(themeProvider, colorScheme),
-                const SizedBox(height: 30),
                 _buildSectionLabel('APP ICON STYLE'),
                 const SizedBox(height: 12),
                 _buildAppIconPicker(colorScheme),
@@ -153,10 +140,12 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF121212) : const Color(0xFFF3F4F6),
+        color: isDark ? AppColors.baseScreen : const Color(0xFFF3F4F6),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: colorScheme.onSurface.withValues(alpha: 0.05),
+          color: isDark
+              ? AppColors.persistentBar
+              : colorScheme.onSurface.withValues(alpha: 0.05),
           width: 1.5,
         ),
       ),
@@ -169,7 +158,9 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.2),
+                  color: isDark
+                      ? AppColors.interactiveFocus.withValues(alpha: 0.25)
+                      : colorScheme.primary.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -183,44 +174,55 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                               errorBuilder: (context, error, stackTrace) =>
                                   Icon(
                                     Icons.chat_bubble_rounded,
-                                    color: colorScheme.primary,
+                                    color: isDark
+                                        ? AppColors.interactiveFocus
+                                        : colorScheme.primary,
                                     size: 16,
                                   ),
                             ),
                           )
                         : Icon(
                             Icons.chat_bubble_rounded,
-                            color: colorScheme.primary,
+                            color: isDark
+                                ? AppColors.interactiveFocus
+                                : colorScheme.primary,
                             size: 16,
                           ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Live Theme Preview',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimary : colorScheme.onSurface,
+                    ),
                   ),
                   Text(
                     'Online',
-                    style: TextStyle(fontSize: 10, color: Colors.green),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? AppColors.textSecondary : Colors.green,
+                    ),
                   ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 20),
-          // Recipient Message
+          // Recipient Message (Receiver Bubble: #2D222F, Text: #FADCD5)
           Align(
             alignment: Alignment.centerLeft,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               margin: const EdgeInsets.only(right: 40),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF262626) : Colors.white,
+                color: isDark ? AppColors.persistentBar : Colors.white,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(18),
                   topRight: Radius.circular(18),
@@ -228,27 +230,30 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Text(
+              child: Text(
                 'How does the new theme setup look to you?',
-                style: TextStyle(fontSize: 16, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDark ? AppColors.textPrimary : Colors.black87,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 12),
-          // Sender Message
+          // Sender Message (Sender Bubble: #6D3C52, Text: #FADCD5)
           Align(
             alignment: Alignment.centerRight,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               margin: const EdgeInsets.only(left: 40),
               decoration: BoxDecoration(
-                color: themeProvider.primaryColor,
+                color: isDark ? AppColors.interactiveFocus : themeProvider.primaryColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(18),
                   topRight: Radius.circular(18),
@@ -256,8 +261,8 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
                 ),
               ),
               child: const Text(
-                'Wow, the dynamic brand color is awesome! 🎨✨',
-                style: TextStyle(fontSize: 16, color: Colors.white),
+                'Cuqter palette looks stunning! 🎨✨',
+                style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
               ),
             ),
           ),
@@ -351,60 +356,6 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAccentColorPicker(
-    ThemeProvider themeProvider,
-    ColorScheme colorScheme,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: colorScheme.onSurface.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colorScheme.onSurface.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 14,
-        runSpacing: 14,
-        children: _accentColors.map((colorInfo) {
-          final color = colorInfo['color'] as Color;
-          final isSelected =
-              themeProvider.primaryColor.toARGB32() == color.toARGB32();
-          return GestureDetector(
-            onTap: () => themeProvider.updatePrimaryColor(color),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected
-                      ? colorScheme.onSurface
-                      : Colors.transparent,
-                  width: 3.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, color: Colors.white, size: 20)
-                  : null,
-            ),
-          );
-        }).toList(),
       ),
     );
   }

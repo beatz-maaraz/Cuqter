@@ -1,3 +1,4 @@
+import 'package:cuqter/utils/colors.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:ui';
@@ -1621,6 +1622,7 @@ class _ChatScreenState extends State<ChatScreen> {
     String chatId = getChatId(_auth.currentUser!.uid, widget.receiverId);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -1842,7 +1844,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               widget.receiverName,
                               style: TextStyle(
                                 fontSize: 18,
-                                color: colorScheme.onPrimary,
+                                color: isDark ? AppColors.textPrimary : colorScheme.onPrimary,
                               ),
                             ),
                             Text(
@@ -1851,9 +1853,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 fontSize: 12,
                                 color: status == 'Active Now'
                                     ? Colors.green[300]
-                                    : colorScheme.onPrimary.withValues(
-                                        alpha: 0.7,
-                                      ),
+                                    : (isDark
+                                        ? AppColors.textSecondary
+                                        : colorScheme.onPrimary.withValues(alpha: 0.7)),
                                 fontWeight: status == 'Active Now'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -1866,8 +1868,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 },
               ),
-        backgroundColor: colorScheme.primary,
-        iconTheme: IconThemeData(color: colorScheme.onPrimary),
+        backgroundColor: isDark ? AppColors.baseScreen : colorScheme.primary,
+        iconTheme: IconThemeData(
+          color: isDark ? AppColors.textSecondary : colorScheme.onPrimary,
+        ),
         leading: _isSearching
             ? IconButton(
                 icon: Icon(Icons.arrow_back, color: colorScheme.onPrimary),
@@ -1893,7 +1897,7 @@ class _ChatScreenState extends State<ChatScreen> {
             IconButton(
               icon: huge.HugeIcon(
                 icon: huge.HugeIcons.strokeRoundedCall,
-                color: colorScheme.onPrimary,
+                color: isDark ? AppColors.textSecondary : colorScheme.onPrimary,
                 size: 22,
               ),
               tooltip: 'Voice Call',
@@ -1902,7 +1906,7 @@ class _ChatScreenState extends State<ChatScreen> {
             IconButton(
               icon: huge.HugeIcon(
                 icon: huge.HugeIcons.strokeRoundedVideo01,
-                color: colorScheme.onPrimary,
+                color: isDark ? AppColors.textSecondary : colorScheme.onPrimary,
                 size: 22,
               ),
               tooltip: 'Video Call',
@@ -2641,10 +2645,16 @@ class _ChatScreenState extends State<ChatScreen> {
                                                                 alpha: 0.15,
                                                               )
                                                         : (isMe
-                                                              ? colorScheme
-                                                                    .primaryContainer
-                                                              : colorScheme
-                                                                    .surfaceContainerHighest),
+                                                              ? (isDark
+                                                                  ? (_customWallpaperUrl != null
+                                                                      ? AppColors.outgoingMessage.withValues(alpha: 0.92)
+                                                                      : AppColors.outgoingMessage)
+                                                                  : colorScheme.primaryContainer)
+                                                              : (isDark
+                                                                  ? (_customWallpaperUrl != null
+                                                                      ? AppColors.incomingMessage.withValues(alpha: 0.92)
+                                                                      : AppColors.incomingMessage)
+                                                                  : colorScheme.surfaceContainerHighest)),
                                                     borderRadius: BorderRadius.only(
                                                       topLeft:
                                                           const Radius.circular(
@@ -2776,9 +2786,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     vertical: 6,
                                                   ),
                                               decoration: BoxDecoration(
-                                                color: colorScheme
-                                                    .surfaceContainerHighest
-                                                    .withValues(alpha: 0.8),
+                                                color: isDark
+                                                    ? AppColors.interactiveContainer
+                                                    : colorScheme
+                                                        .surfaceContainerHighest
+                                                        .withValues(alpha: 0.8),
                                                 borderRadius:
                                                     BorderRadius.circular(16),
                                               ),
@@ -2787,8 +2799,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
+                                                  color: isDark
+                                                      ? AppColors.textPrimary
+                                                      : colorScheme.onSurfaceVariant,
                                                 ),
                                               ),
                                             ),
@@ -3128,7 +3141,7 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isDark
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.95)
+            ? AppColors.interactiveContainer
             : colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -3168,7 +3181,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
+                    color: isDark ? AppColors.textPrimary : colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -3312,6 +3325,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageInput(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -3432,7 +3446,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       icon: huge.HugeIcons.strokeRoundedAdd01,
                                       color: _isAttachmentMenuOpen
                                           ? colorScheme.error
-                                          : colorScheme.primary,
+                                          : (isDark ? AppColors.textSecondary : colorScheme.primary),
                                       size: 24,
                                       strokeWidth: 3.0,
                                     ),
@@ -3455,14 +3469,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                   borderRadius: BorderRadius.circular(24),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: colorScheme.onSurface.withValues(
-                                        alpha: 0.06,
-                                      ),
+                                      color: isDark
+                                          ? AppColors.persistentBar
+                                          : colorScheme.onSurface.withValues(
+                                              alpha: 0.06,
+                                            ),
                                       borderRadius: BorderRadius.circular(24),
                                       border: Border.all(
-                                        color: colorScheme.onSurface.withValues(
-                                          alpha: 0.12,
-                                        ),
+                                        color: isDark
+                                            ? AppColors.divider
+                                            : colorScheme.onSurface.withValues(
+                                                alpha: 0.12,
+                                              ),
                                         width: 1.0,
                                       ),
                                     ),
@@ -3486,7 +3504,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     icon: huge
                                                         .HugeIcons
                                                         .strokeRoundedKeyboard,
-                                                    color: colorScheme.primary,
+                                                    color: isDark ? AppColors.textSecondary : colorScheme.primary,
                                                     size: 22,
                                                     strokeWidth: 1.8,
                                                   )
@@ -3494,7 +3512,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     icon: huge
                                                         .HugeIcons
                                                         .strokeRoundedSmile,
-                                                    color: colorScheme.primary,
+                                                    color: isDark ? AppColors.textSecondary : colorScheme.primary,
                                                     size: 22,
                                                     strokeWidth: 1.8,
                                                   ),
@@ -3525,7 +3543,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             keyboardType:
                                                 TextInputType.multiline,
                                             style: TextStyle(
-                                              color: colorScheme.onSurface,
+                                              color: isDark ? AppColors.textPrimary : colorScheme.onSurface,
                                               fontSize: 16,
                                             ),
                                             onSubmitted: (value) {
@@ -3537,8 +3555,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                               isDense: true,
                                               hintText: 'Text a Message...',
                                               hintStyle: TextStyle(
-                                                color: colorScheme.onSurface
-                                                    .withValues(alpha: 0.45),
+                                                color: isDark
+                                                    ? AppColors.textSecondary
+                                                    : colorScheme.onSurface.withValues(alpha: 0.45),
                                                 fontSize: 16,
                                               ),
                                               filled: false,
@@ -3585,8 +3604,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                                       icon: huge
                                                           .HugeIcons
                                                           .strokeRoundedCamera01,
-                                                      color:
-                                                          colorScheme.primary,
+                                                      color: isDark
+                                                          ? AppColors.textSecondary
+                                                          : colorScheme.primary,
                                                       size: 22,
                                                       strokeWidth: 1.8,
                                                     ),
@@ -3613,8 +3633,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                                         icon: huge
                                                             .HugeIcons
                                                             .strokeRoundedMic01,
-                                                        color: colorScheme
-                                                            .primary,
+                                                        color: isDark
+                                                            ? AppColors.textSecondary
+                                                            : colorScheme.primary,
                                                         size: 22,
                                                         strokeWidth: 1.8,
                                                       ),
@@ -3694,19 +3715,21 @@ class _ChatScreenState extends State<ChatScreen> {
                                                       width: 44,
                                                       height: 44,
                                                       decoration: BoxDecoration(
-                                                        color: colorScheme
-                                                            .primary
-                                                            .withValues(
-                                                              alpha: 0.85,
-                                                            ),
+                                                        color: isDark
+                                                            ? AppColors.interactiveFocus
+                                                            : colorScheme.primary.withValues(alpha: 0.85),
                                                         shape: BoxShape.circle,
                                                       ),
                                                       child: AnimatedSendButton(
                                                         onTap: sendMessage,
                                                         backgroundColor:
                                                             Colors.transparent,
-                                                        iconColor: colorScheme
-                                                            .onPrimary,
+                                                        pressedColor: isDark
+                                                            ? AppColors.interactiveContainer
+                                                            : null,
+                                                        iconColor: isDark
+                                                            ? AppColors.textPrimary
+                                                            : colorScheme.onPrimary,
                                                         iconSize: 20.0,
                                                         radius: 22.0,
                                                       ),
@@ -5495,6 +5518,7 @@ class _ChatScreenState extends State<ChatScreen> {
     required String timeText,
     required bool isRead,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final String type = message['type'] ?? 'text';
     final String rawText = message['text'] ?? '';
     final List<String> parts = rawText.split('|');
@@ -6014,9 +6038,11 @@ class _ChatScreenState extends State<ChatScreen> {
               text: text,
               baseStyle: TextStyle(
                 fontSize: _fontSize,
-                color: isMe
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
+                color: isDark
+                    ? AppColors.textPrimary
+                    : (isMe
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant),
               ),
               linkColor: isMe
                   ? (Theme.of(context).brightness == Brightness.dark
@@ -6038,11 +6064,12 @@ class _ChatScreenState extends State<ChatScreen> {
     bool isRead, {
     bool isOverMedia = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final Color textColor = isOverMedia
-        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.6)
+        ? (isDark ? AppColors.textPrimary.withValues(alpha: 0.70) : colorScheme.onSurfaceVariant.withValues(alpha: 0.6))
         : (isMe
-              ? colorScheme.onPrimaryContainer.withValues(alpha: 0.6)
-              : colorScheme.onSurfaceVariant.withValues(alpha: 0.6));
+              ? (isDark ? AppColors.textPrimary.withValues(alpha: 0.70) : colorScheme.onPrimaryContainer.withValues(alpha: 0.6))
+              : (isDark ? AppColors.textSecondary : colorScheme.onSurfaceVariant.withValues(alpha: 0.6)));
 
     return Padding(
       padding: isOverMedia

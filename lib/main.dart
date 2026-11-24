@@ -203,16 +203,67 @@ class _MainAppState extends State<MainApp> {
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: themeProvider.primaryColor,
+          seedColor: AppColors.interactiveFocus,
           brightness: Brightness.dark,
-        ).copyWith(primary: themeProvider.primaryColor, surface: Colors.black),
-        scaffoldBackgroundColor: Colors.black,
+        ).copyWith(
+          primary: AppColors.interactiveFocus,
+          onPrimary: AppColors.textPrimary,
+          surface: AppColors.baseScreen,
+          onSurface: AppColors.textPrimary,
+          primaryContainer: AppColors.interactiveFocus,
+          onPrimaryContainer: AppColors.textPrimary,
+          surfaceContainer: AppColors.persistentBar,
+          surfaceContainerHigh: AppColors.persistentBar,
+          surfaceContainerHighest: AppColors.interactiveContainer,
+          onSurfaceVariant: AppColors.textSecondary,
+          outline: AppColors.textSecondary,
+          outlineVariant: AppColors.persistentBar,
+        ),
+        scaffoldBackgroundColor: AppColors.baseScreen,
+        dividerColor: AppColors.persistentBar,
+        dividerTheme: const DividerThemeData(
+          color: AppColors.persistentBar,
+          thickness: 1,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.baseScreen,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          iconTheme: IconThemeData(color: AppColors.textSecondary),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: AppColors.persistentBar,
+          selectedItemColor: AppColors.textPrimary,
+          unselectedItemColor: AppColors.textSecondary,
+        ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: AppColors.persistentBar,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+          contentTextStyle: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+          ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.persistentBar,
+          surfaceTintColor: Colors.transparent,
+        ),
+        popupMenuTheme: const PopupMenuThemeData(
+          color: AppColors.persistentBar,
+          surfaceTintColor: Colors.transparent,
+        ),
         useMaterial3: true,
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: AppColors.interactiveFocus,
           contentTextStyle: const TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.w600,
           ),
           shape: RoundedRectangleBorder(

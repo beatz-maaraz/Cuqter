@@ -11,6 +11,7 @@ import 'package:cuqter/modules/status.dart';
 import 'package:cuqter/services/status_service.dart';
 import 'package:cuqter/Screen/status/create_status_screen.dart';
 import 'package:cuqter/Screen/status/status_view_screen.dart';
+import 'package:cuqter/utils/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:cuqter/widgets/full_screen_profile_pic_page.dart';
 import 'package:cuqter/Screen/home/notification_screen.dart';
@@ -592,7 +593,7 @@ class _HomepageState extends State<Homepage>
                               icon: huge.HugeIcon(
                                 icon: huge.HugeIcons.strokeRoundedCancel01,
                                 color: isDark
-                                    ? colorScheme.onSurface
+                                    ? AppColors.textSecondary
                                     : const Color(0xFF111827),
                                 size: 24,
                               ),
@@ -610,7 +611,7 @@ class _HomepageState extends State<Homepage>
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: isDark
-                                    ? colorScheme.onSurface
+                                    ? AppColors.textPrimary
                                     : const Color(0xFF111827),
                               ),
                             ),
@@ -622,7 +623,7 @@ class _HomepageState extends State<Homepage>
                               icon: huge.HugeIcon(
                                 icon: huge.HugeIcons.strokeRoundedPin02,
                                 color: isDark
-                                    ? colorScheme.onSurface
+                                    ? AppColors.textSecondary
                                     : const Color(0xFF111827),
                                 size: 24,
                               ),
@@ -659,7 +660,7 @@ class _HomepageState extends State<Homepage>
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: isDark
-                                ? colorScheme.onSurface
+                                ? AppColors.textPrimary
                                 : const Color(0xFF111827),
                             letterSpacing: -1,
                           ),
@@ -711,9 +712,7 @@ class _HomepageState extends State<Homepage>
                               },
                               icon: AnimatedNotificationBell(
                                 color: isDark
-                                    ? colorScheme.onSurface.withValues(
-                                        alpha: 0.7,
-                                      )
+                                    ? AppColors.textSecondary
                                     : const Color(0xFF111827),
                                 size: 24,
                               ),
@@ -730,12 +729,12 @@ class _HomepageState extends State<Homepage>
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark
-                      ? colorScheme.onSurface.withValues(alpha: 0.05)
+                      ? AppColors.persistentBar
                       : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark
-                        ? Colors.transparent
+                        ? AppColors.divider
                         : const Color(0xFFE5E7EB),
                     width: 1.0,
                   ),
@@ -784,13 +783,13 @@ class _HomepageState extends State<Homepage>
                     hintText: 'Search users...',
                     hintStyle: TextStyle(
                       color: isDark
-                          ? colorScheme.onSurface.withValues(alpha: 0.4)
+                          ? AppColors.textSecondary
                           : const Color(0xFF4B5563),
                       fontSize: 14,
                     ),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: isDark ? Colors.grey : const Color(0xFF4B5563),
+                      color: isDark ? AppColors.textSecondary : const Color(0xFF4B5563),
                     ),
                     filled: false,
                     border: InputBorder.none,
@@ -937,7 +936,7 @@ class _HomepageState extends State<Homepage>
                       }
 
                       return Scrollbar(
-                        child: ListView.builder(
+                        child: ListView.separated(
                           padding: const EdgeInsets.only(top: 8, bottom: 90),
                           physics: kIsWeb || widget.isDesktop
                               ? const ClampingScrollPhysics(
@@ -947,6 +946,15 @@ class _HomepageState extends State<Homepage>
                                   parent: AlwaysScrollableScrollPhysics(),
                                 ),
                           itemCount: users.length,
+                          separatorBuilder: (context, index) => Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: isDark
+                                ? AppColors.divider
+                                : const Color(0xFFF3F4F6),
+                            indent: 80,
+                            endIndent: 16,
+                          ),
                           itemBuilder: (context, index) {
                             var userData =
                                 users[index].data() as Map<String, dynamic>;
@@ -1100,15 +1108,19 @@ class _HomepageState extends State<Homepage>
                                   color:
                                       (widget.selectedUserId == userId ||
                                           isSelected)
-                                      ? colorScheme.primary.withValues(
-                                          alpha: 0.1,
-                                        )
+                                      ? (isDark
+                                          ? AppColors.interactiveContainer
+                                          : colorScheme.primary.withValues(
+                                              alpha: 0.1,
+                                            ))
                                       : Colors.transparent,
                                   border:
                                       (widget.selectedUserId == userId ||
                                           isSelected)
                                       ? Border.all(
-                                          color: colorScheme.primary,
+                                          color: isDark
+                                              ? AppColors.interactiveFocus
+                                              : colorScheme.primary,
                                           width: 2,
                                         )
                                       : Border.all(
@@ -1248,7 +1260,7 @@ class _HomepageState extends State<Homepage>
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 16,
                                                     color: isDark
-                                                        ? colorScheme.onSurface
+                                                        ? AppColors.textPrimary
                                                         : const Color(0xFF111827),
                                                   ),
                                                 ),
@@ -1264,8 +1276,9 @@ class _HomepageState extends State<Homepage>
                                                       icon: huge
                                                           .HugeIcons
                                                           .strokeRoundedPin02,
-                                                      color:
-                                                          colorScheme.primary,
+                                                      color: isDark
+                                                          ? AppColors.interactiveFocus
+                                                          : colorScheme.primary,
                                                       size: 14,
                                                     ),
                                                     const SizedBox(width: 4),
@@ -1275,11 +1288,7 @@ class _HomepageState extends State<Homepage>
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: isDark
-                                                          ? colorScheme
-                                                              .onSurface
-                                                              .withValues(
-                                                                alpha: 0.5,
-                                                              )
+                                                          ? AppColors.textSecondary
                                                           : const Color(0xFF4B5563),
                                                     ),
                                                   ),
@@ -1304,11 +1313,7 @@ class _HomepageState extends State<Homepage>
                                                         color: lastMsg.isRead
                                                             ? Colors.blue
                                                             : (isDark
-                                                                ? colorScheme
-                                                                    .onSurface
-                                                                    .withValues(
-                                                                      alpha: 0.4,
-                                                                    )
+                                                                ? AppColors.textSecondary
                                                                 : const Color(0xFF4B5563)),
                                                       ),
                                                       const SizedBox(width: 4),
@@ -1321,11 +1326,7 @@ class _HomepageState extends State<Homepage>
                                                             .ellipsis,
                                                         style: TextStyle(
                                                           color: isDark
-                                                              ? colorScheme
-                                                                  .onSurface
-                                                                  .withValues(
-                                                                    alpha: 0.6,
-                                                                  )
+                                                              ? AppColors.textSecondary
                                                               : const Color(0xFF4B5563),
                                                           fontSize: 14,
                                                         ),
@@ -1350,12 +1351,32 @@ class _HomepageState extends State<Homepage>
                                                           const EdgeInsets.only(
                                                             left: 8,
                                                           ),
-                                                      width: 10,
-                                                      height: 10,
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 7,
+                                                        vertical: 2,
+                                                      ),
+                                                      constraints: const BoxConstraints(
+                                                        minWidth: 20,
+                                                        minHeight: 20,
+                                                      ),
                                                       decoration: BoxDecoration(
-                                                        color:
-                                                            colorScheme.primary,
-                                                        shape: BoxShape.circle,
+                                                        color: isDark
+                                                            ? AppColors.interactiveFocus
+                                                            : colorScheme.primary,
+                                                        borderRadius:
+                                                            BorderRadius.circular(10),
+                                                      ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          count > 0 ? '$count' : '1',
+                                                          style: TextStyle(
+                                                            color: isDark
+                                                                ? AppColors.textPrimary
+                                                                : Colors.white,
+                                                            fontSize: 11,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
                                                       ),
                                                     );
                                                   }

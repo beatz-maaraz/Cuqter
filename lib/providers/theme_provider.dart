@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cuqter/utils/colors.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
-  Color _primaryColor = const Color(0xFF7C3AED);
+  Color _primaryColor = AppColors.interactiveFocus;
 
   ThemeProvider() {
     _loadTheme();
