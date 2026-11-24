@@ -182,11 +182,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
       _selectedIndex = index;
       _isProgrammaticChange = true;
     });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   Widget _buildNavItem(
@@ -357,133 +359,290 @@ class _NavigationScreenState extends State<NavigationScreen> {
     );
   }
 
+  Widget _buildProfileAvatar(
+    bool isSelected,
+    bool isDark,
+    ColorScheme colorScheme,
+  ) {
+    final unselectedColor = isDark
+        ? AppColors.textSecondary
+        : const Color(0xFF4B5563);
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _currentUserStream,
+      builder: (context, snapshot) {
+        String profilePic = '';
+        if (snapshot.hasData && snapshot.data!.exists) {
+          var data = snapshot.data!.data() as Map<String, dynamic>?;
+          if (data != null) profilePic = data['profilepic'] ?? '';
+        }
+        return Container(
+          padding: EdgeInsets.all(isSelected ? 1.5 : 0),
+          decoration: isSelected
+              ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.interactiveFocus
+                        : colorScheme.primary,
+                    width: 1.5,
+                  ),
+                )
+              : null,
+          child: CircleAvatar(
+            radius: 11,
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
+            backgroundImage: profilePic.isNotEmpty
+                ? (profilePic.startsWith('http')
+                    ? ResizeImage(
+                        CachedNetworkImageProvider(profilePic),
+                        width: 120,
+                        height: 120,
+                      )
+                    : AssetImage(profilePic) as ImageProvider)
+                : null,
+            child: profilePic.isEmpty
+                ? Icon(Icons.person, color: unselectedColor, size: 14)
+                : null,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      extendBody: true,
-      body: PageView(
-        controller: _pageController,
-        physics: kIsWeb
-            ? const NeverScrollableScrollPhysics()
-            : const BouncingScrollPhysics(),
-        onPageChanged: (index) {
-          if (_isProgrammaticChange) {
-            if (index == _selectedIndex) {
-              setState(() => _isProgrammaticChange = false);
-            }
-            return;
-          }
-          if (_selectedIndex != index) {
-            setState(() => _selectedIndex = index);
-          }
-        },
-        children: _screens,
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(
-            left: 80,
-            right: 80,
-            bottom: 15,
-            top: 8,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: kIsWeb
-                ? Container(
-                    height: 62,
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.persistentBar
-                          : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.divider
-                            : const Color(0xFFE5E7EB),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isDark ? 0.3 : 0.08,
-                          ),
-                          blurRadius: 16,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        _buildNavItem(
-                          0,
-                          'CHATS',
-                          huge.HugeIcons.strokeRoundedChat01,
-                          huge.HugeIcons.strokeRoundedBubbleChat,
-                        ),
-                        _buildNavItem(
-                          1,
-                          'CALLS',
-                          huge.HugeIcons.strokeRoundedCall,
-                          huge.HugeIcons.strokeRoundedCalling,
-                        ),
-                        _buildProfileItem(2),
-                      ],
-                    ),
-                  )
-                : BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      height: 62,
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.persistentBar.withValues(alpha: 0.92)
-                            : const Color(0xFFF3F4F6).withValues(alpha: 0.94),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.divider
-                              : const Color(0xFFE5E7EB),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: isDark ? 0.3 : 0.08,
-                            ),
-                            blurRadius: 16,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          _buildNavItem(
-                            0,
-                            'CHATS',
-                            huge.HugeIcons.strokeRoundedChat01,
-                            huge.HugeIcons.strokeRoundedBubbleChat,
-                          ),
-                          _buildNavItem(
-                            1,
-                            'CALLS',
-                            huge.HugeIcons.strokeRoundedCall,
-                            huge.HugeIcons.strokeRoundedCalling,
-                          ),
-                          _buildProfileItem(2),
-                        ],
-                      ),
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Wide screen / desktop / tablet layout: Replace full-screen navigation with Row
+        if (constraints.maxWidth >= 640) {
+          return Scaffold(
+            backgroundColor: isDark ? AppColors.baseScreen : colorScheme.surface,
+            body: Row(
+              children: [
+                // Navigation rail on the left
+                NavigationRail(
+                  selectedIndex: _selectedIndex,
+                  onDestinationSelected: _onTabSelected,
+                  backgroundColor: isDark
+                      ? AppColors.persistentBar
+                      : const Color(0xFFF3F4F6),
+                  indicatorColor: isDark
+                      ? AppColors.interactiveContainer
+                      : colorScheme.primary.withValues(alpha: 0.12),
+                  labelType: NavigationRailLabelType.all,
+                  minWidth: 72,
+                  selectedIconTheme: IconThemeData(
+                    color: isDark ? AppColors.textPrimary : colorScheme.primary,
+                    size: 22,
                   ),
+                  unselectedIconTheme: IconThemeData(
+                    color: isDark
+                        ? AppColors.textSecondary
+                        : const Color(0xFF4B5563),
+                    size: 22,
+                  ),
+                  selectedLabelTextStyle: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimary : colorScheme.primary,
+                    letterSpacing: 0.3,
+                  ),
+                  unselectedLabelTextStyle: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondary
+                        : const Color(0xFF4B5563),
+                    letterSpacing: 0.3,
+                  ),
+                  destinations: [
+                    NavigationRailDestination(
+                      icon: huge.HugeIcon(
+                        icon: huge.HugeIcons.strokeRoundedChat01,
+                        color: isDark
+                            ? AppColors.textSecondary
+                            : const Color(0xFF4B5563),
+                        size: 22,
+                      ),
+                      selectedIcon: huge.HugeIcon(
+                        icon: huge.HugeIcons.strokeRoundedBubbleChat,
+                        color: isDark
+                            ? AppColors.textPrimary
+                            : colorScheme.primary,
+                        size: 22,
+                      ),
+                      label: const Text('CHATS'),
+                    ),
+                    NavigationRailDestination(
+                      icon: huge.HugeIcon(
+                        icon: huge.HugeIcons.strokeRoundedCall,
+                        color: isDark
+                            ? AppColors.textSecondary
+                            : const Color(0xFF4B5563),
+                        size: 22,
+                      ),
+                      selectedIcon: huge.HugeIcon(
+                        icon: huge.HugeIcons.strokeRoundedCalling,
+                        color: isDark
+                            ? AppColors.textPrimary
+                            : colorScheme.primary,
+                        size: 22,
+                      ),
+                      label: const Text('CALLS'),
+                    ),
+                    NavigationRailDestination(
+                      icon: _buildProfileAvatar(false, isDark, colorScheme),
+                      selectedIcon: _buildProfileAvatar(true, isDark, colorScheme),
+                      label: const Text('PROFILE'),
+                    ),
+                  ],
+                ),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: isDark
+                      ? AppColors.divider
+                      : const Color(0xFFE5E7EB),
+                ),
+                // Expanded widget on the right to display active screen content dynamically
+                Expanded(
+                  child: _screens[_selectedIndex],
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Mobile compact layout: Full-screen PageView with bottom navigation bar
+        return Scaffold(
+          extendBody: true,
+          body: PageView(
+            controller: _pageController,
+            physics: kIsWeb
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            onPageChanged: (index) {
+              if (_isProgrammaticChange) {
+                if (index == _selectedIndex) {
+                  setState(() => _isProgrammaticChange = false);
+                }
+                return;
+              }
+              if (_selectedIndex != index) {
+                setState(() => _selectedIndex = index);
+              }
+            },
+            children: _screens,
           ),
-        ),
-      ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(
+                left: 80,
+                right: 80,
+                bottom: 15,
+                top: 8,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: kIsWeb
+                    ? Container(
+                        height: 62,
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.persistentBar
+                              : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.divider
+                                : const Color(0xFFE5E7EB),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.3 : 0.08,
+                              ),
+                              blurRadius: 16,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            _buildNavItem(
+                              0,
+                              'CHATS',
+                              huge.HugeIcons.strokeRoundedChat01,
+                              huge.HugeIcons.strokeRoundedBubbleChat,
+                            ),
+                            _buildNavItem(
+                              1,
+                              'CALLS',
+                              huge.HugeIcons.strokeRoundedCall,
+                              huge.HugeIcons.strokeRoundedCalling,
+                            ),
+                            _buildProfileItem(2),
+                          ],
+                        ),
+                      )
+                    : BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        child: Container(
+                          height: 62,
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.persistentBar.withValues(alpha: 0.92)
+                                : const Color(0xFFF3F4F6).withValues(alpha: 0.94),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppColors.divider
+                                  : const Color(0xFFE5E7EB),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.3 : 0.08,
+                                ),
+                                blurRadius: 16,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              _buildNavItem(
+                                0,
+                                'CHATS',
+                                huge.HugeIcons.strokeRoundedChat01,
+                                huge.HugeIcons.strokeRoundedBubbleChat,
+                              ),
+                              _buildNavItem(
+                                1,
+                                'CALLS',
+                                huge.HugeIcons.strokeRoundedCall,
+                                huge.HugeIcons.strokeRoundedCalling,
+                              ),
+                              _buildProfileItem(2),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
